@@ -55,8 +55,9 @@ check() {
     time_s=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d'|' -f2)
     body=$(printf '%s' "$response" | grep -v '__META__')
 
-    # Accumulate time
-    TOTAL_TIME=$(python3 -c "print(round(${TOTAL_TIME:-0} + ${time_s:-0}, 3))" 2>/dev/null || echo "$TOTAL_TIME")
+    # Accumulate raw time before any rounding
+    TOTAL_TIME=$(python3 -c "print(${TOTAL_TIME:-0} + ${time_s:-0})" 2>/dev/null || echo "$TOTAL_TIME")
+    time_s=$(printf '%.2f' "$time_s" 2>/dev/null || echo "$time_s")
 
     if [[ "$http_status" != "$want_status" ]]; then
         red "FAIL  $desc"
@@ -148,7 +149,8 @@ if [[ -n "$API_KEY" ]]; then
     meta_line=$(printf '%s' "$response" | grep '__META__' || true)
     http_status=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d'|' -f1)
     time_s=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d'|' -f2)
-    TOTAL_TIME=$(python3 -c "print(round(${TOTAL_TIME:-0} + ${time_s:-0}, 3))" 2>/dev/null || echo "$TOTAL_TIME")
+    TOTAL_TIME=$(python3 -c "print(${TOTAL_TIME:-0} + ${time_s:-0})" 2>/dev/null || echo "$TOTAL_TIME")
+    time_s=$(printf '%.2f' "$time_s" 2>/dev/null || echo "$time_s")
     if [[ "$http_status" == "401" ]]; then
         green "PASS  Missing X-API-Key → 401  [${time_s}s]"
         PASS=$(( PASS + 1 ))
@@ -172,7 +174,7 @@ else
     red "${FAIL} of ${total} tests FAILED."
 fi
 
-printf 'Time:   %ss total\n' "$TOTAL_TIME"
+printf 'Time:   %ss total\n' "$(printf '%.2f' "$TOTAL_TIME" 2>/dev/null || echo "$TOTAL_TIME")"
 if [[ $total_tok -gt 0 ]]; then
     printf 'Tokens: %s in + %s out = %s total\n' "$TOTAL_IN" "$TOTAL_OUT" "$total_tok"
 fi
