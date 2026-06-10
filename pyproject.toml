@@ -3,7 +3,7 @@ name = "treasury-label-compliance"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
-    "anthropic>=0.28",
+    "litellm>=1.40",
     "fastapi>=0.111",
     "uvicorn[standard]>=0.30",
     "python-multipart>=0.0.9",

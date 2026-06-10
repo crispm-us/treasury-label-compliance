@@ -1,8 +1,13 @@
 """
-Layer 1 — AI extraction.
+Layer 1 — AI extraction via LiteLLM.
 
-Sends one or two label images to the Claude vision API and returns a parsed
-ExtractionResult ready for the Layer 2 compliance checker.
+Sends one or two label images to the configured vision model and returns a
+parsed ExtractionResult ready for the Layer 2 compliance checker.
+
+LiteLLM provides a single interface across providers (Anthropic, Gemini,
+OpenAI, etc.).  The active model is set by the EXTRACTION_MODEL environment
+variable (default: anthropic/claude-haiku-4-5-20251001).  Fallback models
+can be configured with EXTRACTION_FALLBACK_MODELS (comma-separated list).
 
 Errors from the model API (auth, rate-limit, server, JSON parse failure) are
 returned as ExtractionError rather than raised, so the caller always has
@@ -15,6 +20,13 @@ with the same prompt (the panel_hint is advisory — written to the prompt so th
 model can orient itself, but not used in any branching logic).  The two dicts
 are then merged field-by-field: highest confidence wins; ties go to the
 non-null value.  This tolerates flipped submissions naturally.  See ADR-011.
+
+Fallback strategy
+-----------------
+On a retryable error (anything except 400 and 401), the extractor tries each
+model in EXTRACTION_FALLBACK_MODELS in order before giving up.  Auth errors
+(401) and bad-request errors (400) are not retried — a different model will
+not fix a malformed payload or an invalid key.  See ADR-001 and ADR-008.
 """
 from __future__ import annotations
 
@@ -24,10 +36,14 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-import anthropic
+import litellm
 
-from backend.app.config import ANTHROPIC_API_KEY, EXTRACTION_MODEL
+from backend.app.config import EXTRACTION_FALLBACK_MODELS, EXTRACTION_MODEL
 from backend.app.services.compliance_checker import ExtractionResult
+
+# Suppress LiteLLM's verbose success logging; keep errors.
+litellm.success_callback = []
+litellm.set_verbose = False
 
 # ---------------------------------------------------------------------------
 # Extraction prompt
@@ -112,7 +128,14 @@ class ExtractionError:
     Non-fatal model API or parse error.
 
     status_code is the HTTP status from the provider when available.
-    See audit.py for production action recommendations per status code.
+
+    Recommended production action by status code (see ADR-008):
+      401  — invalid or expired API key; do NOT retry or fall back to same provider
+      400  — bad request (malformed payload, spending cap); do NOT retry
+      429  — rate limited; exponential backoff with jitter before retry
+      500  — provider server error; retry with jitter
+      529  — provider overloaded (Anthropic-specific); retry with jitter
+      None — network error or unexpected exception; retry with jitter
     """
     status_code: int | None
     message: str
@@ -120,6 +143,13 @@ class ExtractionError:
     def to_dict(self) -> dict[str, Any]:
         return {"status_code": self.status_code, "message": self.message}
 
+
+# ---------------------------------------------------------------------------
+# Fallback policy
+# ---------------------------------------------------------------------------
+
+# Errors where retrying — even with a different provider — will not help.
+_NO_RETRY_STATUS_CODES: frozenset[int] = frozenset({400, 401})
 
 # ---------------------------------------------------------------------------
 # Panel merger
@@ -180,46 +210,53 @@ def _extract_single(
     image_bytes: bytes,
     media_type: str,
     panel_hint: str | None,
-    client: anthropic.Anthropic,
     model: str,
 ) -> tuple[dict | None, ExtractionError | None]:
-    """Call the model for one panel image. Returns (raw_dict, error)."""
+    """
+    Call the vision model for one panel image via LiteLLM.
+
+    Uses the OpenAI messages format (system + user with image_url content).
+    LiteLLM translates this to the appropriate wire format for each provider.
+
+    Returns (raw_dict, error).  Exactly one will be non-None.
+    """
     image_b64 = base64.standard_b64encode(image_bytes).decode()
     panel_note = f"  (This appears to be the {panel_hint} panel.)" if panel_hint else ""
     prompt = _USER_TEMPLATE.format(panel_note=panel_note, model=model)
 
     try:
-        response = client.messages.create(
+        response = litellm.completion(
             model=model,
             max_tokens=2048,
-            system=_SYSTEM,
             messages=[
+                {"role": "system", "content": _SYSTEM},
                 {
                     "role": "user",
                     "content": [
                         {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": media_type,
-                                "data": image_b64,
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{media_type};base64,{image_b64}"
                             },
                         },
                         {"type": "text", "text": prompt},
                     ],
-                }
+                },
             ],
         )
-    except anthropic.AuthenticationError as exc:
+    except litellm.AuthenticationError as exc:
         return None, ExtractionError(status_code=401, message=str(exc))
-    except anthropic.RateLimitError as exc:
+    except litellm.RateLimitError as exc:
         return None, ExtractionError(status_code=429, message=str(exc))
-    except anthropic.APIStatusError as exc:
-        return None, ExtractionError(status_code=exc.status_code, message=str(exc))
-    except Exception as exc:  # network errors, etc.
+    except litellm.BadRequestError as exc:
+        return None, ExtractionError(status_code=400, message=str(exc))
+    except litellm.APIError as exc:
+        status = getattr(exc, "status_code", None)
+        return None, ExtractionError(status_code=status, message=str(exc))
+    except Exception as exc:
         return None, ExtractionError(status_code=None, message=str(exc))
 
-    raw = response.content[0].text.strip()
+    raw = response.choices[0].message.content.strip()
     # Strip markdown code fences if the model wraps the JSON despite the instruction
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
@@ -244,24 +281,44 @@ def extract(
     back_bytes: bytes | None = None,
     back_media_type: str | None = None,
     model: str | None = None,
+    fallback_models: list[str] | None = None,
 ) -> tuple[ExtractionResult | None, ExtractionError | None, float]:
     """
     Run Layer 1 extraction on one or two panel images.
 
+    Tries `model` first; on retryable errors iterates through `fallback_models`
+    in order.  Auth errors (401) and bad-request errors (400) are not retried.
+
     Returns (result, error, duration_ms).
     Exactly one of result/error will be non-None.
-    duration_ms covers the total wall-clock time for all API calls.
+    duration_ms covers total wall-clock time across all API calls.
     """
     model = model or EXTRACTION_MODEL
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    fallback_models = fallback_models if fallback_models is not None else EXTRACTION_FALLBACK_MODELS
+    all_models = [model] + fallback_models
     t0 = time.monotonic()
 
-    front_dict, err = _extract_single(front_bytes, front_media_type, "front", client, model)
+    def _extract_with_fallback(
+        img_bytes: bytes,
+        media_type: str,
+        panel_hint: str | None,
+    ) -> tuple[dict | None, ExtractionError | None]:
+        last_error: ExtractionError | None = None
+        for m in all_models:
+            raw_dict, err = _extract_single(img_bytes, media_type, panel_hint, m)
+            if err is None:
+                return raw_dict, None
+            if err.status_code in _NO_RETRY_STATUS_CODES:
+                return None, err  # auth / bad-request: don't try fallbacks
+            last_error = err
+        return None, last_error
+
+    front_dict, err = _extract_with_fallback(front_bytes, front_media_type, "front")
     if err:
         return None, err, (time.monotonic() - t0) * 1000
 
     if back_bytes and back_media_type:
-        back_dict, err = _extract_single(back_bytes, back_media_type, "back", client, model)
+        back_dict, err = _extract_with_fallback(back_bytes, back_media_type, "back")
         if err:
             return None, err, (time.monotonic() - t0) * 1000
         merged = _merge_panels(front_dict, back_dict)
@@ -273,6 +330,8 @@ def extract(
     try:
         result = ExtractionResult.from_dict(merged)
     except Exception as exc:
-        return None, ExtractionError(status_code=None, message=f"Schema parse error: {exc}"), duration_ms
+        return None, ExtractionError(
+            status_code=None, message=f"Schema parse error: {exc}"
+        ), duration_ms
 
     return result, None, duration_ms

@@ -85,7 +85,7 @@ ABV is mandatory for flavored malt beverages and products where flavor contribut
 ### Multi-provider model routing (ADR-001, ADR-002)
 **ADR reference:** ADR-001 §Multi-provider strategy, ADR-002
 
-ADR-001 documents a multi-provider strategy (Claude primary, Gemini and GPT-4o as fallbacks) and ADR-002 selects LiteLLM as the abstraction layer. Currently only the Anthropic SDK is used directly. LiteLLM integration and provider fallback routing are not implemented. Budget-capped keys for Gemini and GPT-4o are pending.
+Implemented. LiteLLM is the abstraction layer (`extractor.py` uses `litellm.completion()`). Any LiteLLM-supported provider can be selected via `EXTRACTION_MODEL` (format: `provider/model-name`). A sequential fallback list is configurable via `EXTRACTION_FALLBACK_MODELS` (comma-separated). Non-retryable errors (401, 400) halt fallback immediately; all other errors (429, 500, network) try the next model. Budget-capped API keys for Gemini and GPT-4o are still pending acquisition.
 
 ### Retry and backoff (ADR-008)
 **ADR reference:** ADR-008 §Retry strategy
