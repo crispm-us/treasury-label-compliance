@@ -16,7 +16,7 @@ ADR-009 sketched an extraction schema for Layer 1 (the AI vision model). After w
 
 `schema_version: "1.0"`
 
-The `schema_version` field is required in every extraction result. The checker rejects documents whose version it does not recognise. Breaking changes (new mandatory fields, changed confidence semantics) require a version bump.
+The `schema_version` field is required in every extraction result. The checker rejects documents whose version it does not recognize. Breaking changes (new mandatory fields, changed confidence semantics) require a version bump.
 
 ---
 
@@ -27,7 +27,7 @@ The `schema_version` field is required in every extraction result. The checker r
 | `schema_version` | string | yes | Must be `"1.0"` |
 | `readable` | boolean | yes | `false` if the model could not interpret the image at all (too blurry, corrupt, fully obscured). When `false`, all other fields are undefined and the checker returns `ERROR` immediately. |
 | `beverage_class` | string \| null | yes | One of `"beer"`, `"spirits"`, `"wine"`, or `null` if unrecognisable. Null triggers an `R-META-01` warning in the checker. |
-| `panels_provided` | array[string] | yes | Which physical panels were submitted. Valid elements: `"front"`, `"back"`. Used for audit logging only — the checker does not change behaviour based on this value. |
+| `panels_provided` | array[string] | yes | Which physical panels were submitted. Valid elements: `"front"`, `"back"`. Used for audit logging only — the checker does not change behavior based on this value. |
 | `extraction_model` | string | yes | Model identifier that produced this result (e.g., `"claude-haiku-4-5-20251001"`). Use `"fixture"` for test data. Stored in the audit log. |
 | `fields` | object | yes | 18 field objects described below. |
 

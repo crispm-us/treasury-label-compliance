@@ -147,6 +147,27 @@ def test_beer_partial_front_only():
 
 
 # ---------------------------------------------------------------------------
+# gws_present flag contradicts text evidence  (regression — 2026-06-10)
+# ---------------------------------------------------------------------------
+
+def test_beer_gws_flag_contradiction():
+    """
+    Model returned gws_present=false (high confidence) but also extracted the
+    correct GWS header and body text.  Text evidence must override the flag:
+    R-GW-01 must NOT fire, and the correct header/body must pass R-GW-02/03.
+    All other beer fields are present and correct → COMPLIANT.
+    """
+    r = _load("beer_gws_flag_contradiction.json")
+    assert r.verdict == "COMPLIANT", f"Expected COMPLIANT, got {r.verdict}; issues: {r.issues}"
+    rule_ids = {i.rule_id for i in r.issues}
+    assert "R-GW-01" not in rule_ids, "R-GW-01 must not fire when GWS text is present"
+    assert "R-GW-02" not in rule_ids
+    assert "R-GW-03" not in rule_ids
+    assert r.errors == []
+    assert r.warnings == []
+
+
+# ---------------------------------------------------------------------------
 # Cannot read
 # ---------------------------------------------------------------------------
 
@@ -184,7 +205,7 @@ def test_spirits_partial_noncompliant_documented():
     Partial extraction (ABV and bottler address not found) co-exists with a
     definitive R-GW-03 error (GWS header title-case, high confidence).
 
-    Current behaviour: verdict is NONCOMPLIANT (error present) and the
+    Current behavior: verdict is NONCOMPLIANT (error present) and the
     not_found warnings are also in issues.  The caller is responsible for
     surfacing both the violation AND the warnings.
 

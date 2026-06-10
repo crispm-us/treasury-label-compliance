@@ -242,6 +242,16 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
         ))
 
     # R-GW-02: body must match verbatim canonical text
+    # The canonical text (27 CFR §16.21) uses American English spelling.
+    # Production note: labels from Canadian, UK, Australian, or other non-US
+    # production facilities sometimes use Commonwealth spellings (e.g.
+    # "impairs your ability" is fine, but hypothetical variants like "programme"
+    # or "organisation" in the warning would be non-compliant).  The TTB has not
+    # issued guidance permitting alternate spellings; the verbatim requirement
+    # means any deviation — including non-American English spelling — is a
+    # violation.  A future version may want to distinguish spelling-only deviations
+    # from substantive text changes, both for human review triage and for any
+    # waiver process.  For now, the check is strictly verbatim.
     if f.gws_body.confidence != "not_found" and f.gws_body.value is not None:
         if _normalize(f.gws_body.value) != _normalize(GWS_CANONICAL_BODY):
             sev = "error" if f.gws_body.confidence == "high" else "warning"
@@ -281,8 +291,8 @@ def _check_beer(f: ExtractionFields, issues: list[Issue]) -> None:
             rule_id="R-MB-03", severity="warning",
             field="abv_pct", found=None,
             expected=(
-                "Alcohol content not visible. Required if product is a flavoured malt beverage "
-                "or contains flavour-derived alcohol (27 CFR §7.63(a)(3)). "
+                "Alcohol content not visible. Required if product is a flavored malt beverage "
+                "or contains flavor-derived alcohol (27 CFR §7.63(a)(3)). "
                 "Not required for traditional beer/ale/lager/stout."
             ),
         ))
