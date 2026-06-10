@@ -45,14 +45,14 @@ check() {
 
     # Append timing and status to the response via -w; separate with a sentinel line
     response=$(curl -s \
-        -w '\n__META__%{http_code}__%{time_total}' \
+        -w '\n__META__%{http_code}|%{time_total}' \
         ${API_KEY:+-H "X-API-Key:${API_KEY}"} \
         "$@" 2>&1)
 
     local meta_line
     meta_line=$(printf '%s' "$response" | grep '__META__' || true)
-    http_status=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d__ -f1)
-    time_s=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d__ -f3)
+    http_status=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d'|' -f1)
+    time_s=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d'|' -f2)
     body=$(printf '%s' "$response" | grep -v '__META__')
 
     # Accumulate time
@@ -142,12 +142,12 @@ check "Valid Content-Type, wrong magic bytes → 415" \
 if [[ -n "$API_KEY" ]]; then
     # Override auth_args for this one test — intentionally send no key
     response=$(curl -s \
-        -w '\n__META__%{http_code}__%{time_total}' \
+        -w '\n__META__%{http_code}|%{time_total}' \
         -X POST "${BASE_URL}/v1/check" \
         -F "front=@test-labels/beer/prairie-creek-lager-front.jpg" 2>&1)
     meta_line=$(printf '%s' "$response" | grep '__META__' || true)
-    http_status=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d__ -f1)
-    time_s=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d__ -f3)
+    http_status=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d'|' -f1)
+    time_s=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d'|' -f2)
     TOTAL_TIME=$(python3 -c "print(round(${TOTAL_TIME:-0} + ${time_s:-0}, 3))" 2>/dev/null || echo "$TOTAL_TIME")
     if [[ "$http_status" == "401" ]]; then
         green "PASS  Missing X-API-Key → 401  [${time_s}s]"
