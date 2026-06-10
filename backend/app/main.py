@@ -51,16 +51,64 @@ app = FastAPI(
     title="TTB Label Compliance API",
     version="0.1.0",
     description=(
-        "Prototype — Layer 1 (Claude vision extraction) + "
+        "Prototype — Layer 1 (AI vision extraction) + "
         "Layer 2 (deterministic TTB compliance check)."
     ),
 )
 
 # ---------------------------------------------------------------------------
-# Response schema
+# Upload validation
 # ---------------------------------------------------------------------------
 
 ALLOWED_MEDIA_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+MAX_IMAGE_BYTES: int = 10 * 1024 * 1024  # 10 MB per image
+
+# Magic-byte signatures for supported image formats.
+# These are checked against the actual file content, independent of the
+# Content-Type header supplied by the client.
+_JPEG_MAGIC = b"\xff\xd8\xff"
+_PNG_MAGIC  = b"\x89PNG\r\n\x1a\n"
+
+
+def _sniff_media_type(data: bytes) -> str | None:
+    """Return the MIME type detected from magic bytes, or None if unrecognized."""
+    if data[:3] == _JPEG_MAGIC:
+        return "image/jpeg"
+    if data[:8] == _PNG_MAGIC:
+        return "image/png"
+    if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
+async def _read_validated(upload: UploadFile, field: str) -> bytes:
+    """
+    Read an uploaded image after validating:
+      1. Content-Type header is an allowed MIME type  → 415
+      2. File does not exceed MAX_IMAGE_BYTES         → 413
+      3. Magic bytes match a supported image format   → 415
+
+    Reading one extra byte lets us detect overflow without buffering the
+    entire oversized payload first.
+    """
+    if upload.content_type not in ALLOWED_MEDIA_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"{field}: unsupported type '{upload.content_type}'. Use JPEG, PNG, or WebP.",
+        )
+    data = await upload.read(MAX_IMAGE_BYTES + 1)
+    if len(data) > MAX_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"{field}: file exceeds the {MAX_IMAGE_BYTES // (1024 * 1024)} MB limit",
+        )
+    if _sniff_media_type(data) is None:
+        raise HTTPException(
+            status_code=415,
+            detail=f"{field}: file content is not a recognized image format (JPEG, PNG, or WebP)",
+        )
+    return data
 
 
 class IssueOut(BaseModel):
@@ -115,20 +163,9 @@ async def check_label(
     request_id = str(uuid.uuid4())
     timestamp  = datetime.now(timezone.utc).isoformat()
 
-    # --- Validate content types ------------------------------------------------
-    if front.content_type not in ALLOWED_MEDIA_TYPES:
-        raise HTTPException(
-            status_code=415,
-            detail=f"front: unsupported type '{front.content_type}'. Use JPEG, PNG, or WebP.",
-        )
-    if back and back.content_type not in ALLOWED_MEDIA_TYPES:
-        raise HTTPException(
-            status_code=415,
-            detail=f"back: unsupported type '{back.content_type}'. Use JPEG, PNG, or WebP.",
-        )
-
-    front_bytes = await front.read()
-    back_bytes  = await back.read() if back else None
+    # --- Read and validate uploads ----------------------------------------------
+    front_bytes = await _read_validated(front, "front")
+    back_bytes  = await _read_validated(back, "back") if back else None
 
     # --- Layer 1: extraction ---------------------------------------------------
     result, model_error, duration_ms = extract(

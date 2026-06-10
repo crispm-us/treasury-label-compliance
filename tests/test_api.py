@@ -296,6 +296,38 @@ def test_unsupported_back_media_type_returns_415(client):
     assert r.status_code == 415
 
 
+def test_oversized_front_returns_413(client, monkeypatch):
+    """File larger than MAX_IMAGE_BYTES must return 413."""
+    monkeypatch.setattr("backend.app.main.MAX_IMAGE_BYTES", 100)
+    r = client.post(
+        "/v1/check",
+        files={"front": ("big.jpg", b"x" * 101, "image/jpeg")},
+    )
+    assert r.status_code == 413
+
+
+def test_oversized_back_returns_413(client, monkeypatch):
+    """Oversized back panel must also return 413."""
+    monkeypatch.setattr("backend.app.main.MAX_IMAGE_BYTES", 100)
+    r = client.post(
+        "/v1/check",
+        files={
+            "front": ("front.jpg", _JPEG,      "image/jpeg"),
+            "back":  ("big.jpg",   b"x" * 101, "image/jpeg"),
+        },
+    )
+    assert r.status_code == 413
+
+
+def test_invalid_magic_bytes_returns_415(client):
+    """Correct Content-Type header but wrong file content must return 415."""
+    r = client.post(
+        "/v1/check",
+        files={"front": ("label.jpg", b"%PDF-1.4 fake content", "image/jpeg")},
+    )
+    assert r.status_code == 415
+
+
 # ---------------------------------------------------------------------------
 # API key authentication
 # ---------------------------------------------------------------------------

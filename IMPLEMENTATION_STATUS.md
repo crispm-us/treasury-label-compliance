@@ -95,7 +95,7 @@ The extractor makes a single model call per panel with no retry on transient fai
 ### Image preprocessing pipeline (ADR-008)
 **ADR reference:** ADR-008
 
-ADR-008 documents preprocessing steps: upload size limit enforcement (beyond content-type check), magic-byte MIME validation, orientation correction (EXIF), resolution normalization, and contrast enhancement for low-quality scans. None of these are implemented. The current check is MIME type from the multipart header only.
+ADR-008 documents preprocessing steps. Implemented: upload size limit (10 MB per image, returns 413), magic-byte MIME validation (returns 415 when file content does not match a recognized JPEG/PNG/WebP signature, regardless of the Content-Type header). Not implemented: orientation correction (EXIF), resolution normalization, contrast enhancement for low-quality scans.
 
 ### Frontend (ADR-005)
 **ADR reference:** ADR-005
