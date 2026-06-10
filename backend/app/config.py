@@ -41,4 +41,4 @@ AUDIT_LOG_DIR: Path = REPO_ROOT / "audit_logs"
 # ---------------------------------------------------------------------------
 
 EXTRACTION_MODEL: str = os.getenv("EXTRACTION_MODEL", "claude-haiku-4-5-20251001")
-ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY_CRISPM", "")
