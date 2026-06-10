@@ -131,6 +131,8 @@ class CheckResponse(BaseModel):
     partial_verification:  bool  # True when NONCOMPLIANT but some mandatory fields
                                  # were not_found (violation confirmed, full check impossible)
                                  # See ADR-011 §"Partial extraction with high-confidence violation"
+    input_tokens:          int | None   # prompt tokens charged by the model API (None on error)
+    output_tokens:         int | None   # completion tokens charged by the model API (None on error)
 
 
 # ---------------------------------------------------------------------------
@@ -168,7 +170,7 @@ async def check_label(
     back_bytes  = await _read_validated(back, "back") if back else None
 
     # --- Layer 1: extraction ---------------------------------------------------
-    result, model_error, duration_ms = extract(
+    result, model_error, duration_ms, usage = extract(
         front_bytes=front_bytes,
         front_media_type=front.content_type,
         back_bytes=back_bytes,
@@ -195,6 +197,7 @@ async def check_label(
         "timestamp":              timestamp,
         "extraction_model":       EXTRACTION_MODEL,
         "extraction_duration_ms": round(duration_ms, 1),
+        "usage":                  usage,
         "model_error":            model_error.to_dict() if model_error else None,
         "extraction_result":      extraction_dict,
         "verdict":                compliance.verdict,
@@ -225,6 +228,8 @@ async def check_label(
         extraction_model=EXTRACTION_MODEL,
         audit_logged=AUDIT_ENABLED,
         partial_verification=partial_verification,
+        input_tokens=usage.get("input_tokens")  if usage else None,
+        output_tokens=usage.get("output_tokens") if usage else None,
     )
 
 

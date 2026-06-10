@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # smoke-test.sh — end-to-end API smoke tests against a running local server.
 #
+# Tracks per-request timing and token usage; prints a summary at the end.
+#
 # Usage:
 #   uv run uvicorn backend.app.main:app --reload   # terminal 1
 #   bash scripts/smoke-test.sh                     # terminal 2
@@ -8,12 +10,15 @@
 # Optional overrides:
 #   BASE_URL=https://your-railway-url API_KEY=secret bash scripts/smoke-test.sh
 
-set -euo pipefail
+set -uo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:8000}"
 API_KEY="${API_KEY:-}"
 PASS=0
 FAIL=0
+TOTAL_TIME="0"
+TOTAL_IN=0
+TOTAL_OUT=0
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -21,13 +26,13 @@ FAIL=0
 
 green()  { printf '\033[32m%s\033[0m\n' "$*"; }
 red()    { printf '\033[31m%s\033[0m\n' "$*"; }
-yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
 
-auth_header() {
-    if [[ -n "$API_KEY" ]]; then
-        echo "-H" "X-API-Key: ${API_KEY}"
-    fi
+auth_args() {
+    [[ -n "$API_KEY" ]] && printf '%s' "-H X-API-Key:${API_KEY}" || true
 }
+
+# py <expr> — evaluate a Python one-liner against $body (set before calling)
+py() { printf '%s' "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print($1)" 2>/dev/null || echo ""; }
 
 # check <description> <expected_http_status> <expected_verdict_or_-> [curl args...]
 check() {
@@ -36,36 +41,58 @@ check() {
     local want_verdict="$3"
     shift 3
 
-    local response http_status body verdict
+    local response http_status time_s body verdict in_tok out_tok tok_info
 
-    response=$(curl -s -w '\n__STATUS__%{http_code}' \
-        $(auth_header) \
+    # Append timing and status to the response via -w; separate with a sentinel line
+    response=$(curl -s \
+        -w '\n__META__%{http_code}__%{time_total}' \
+        ${API_KEY:+-H "X-API-Key:${API_KEY}"} \
         "$@" 2>&1)
 
-    http_status=$(printf '%s' "$response" | grep '__STATUS__' | sed 's/__STATUS__//')
-    body=$(printf '%s' "$response" | grep -v '__STATUS__')
+    local meta_line
+    meta_line=$(printf '%s' "$response" | grep '__META__' || true)
+    http_status=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d__ -f1)
+    time_s=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d__ -f3)
+    body=$(printf '%s' "$response" | grep -v '__META__')
+
+    # Accumulate time
+    TOTAL_TIME=$(python3 -c "print(round(${TOTAL_TIME:-0} + ${time_s:-0}, 3))" 2>/dev/null || echo "$TOTAL_TIME")
 
     if [[ "$http_status" != "$want_status" ]]; then
         red "FAIL  $desc"
-        red "      HTTP $http_status (expected $want_status)"
+        red "      HTTP $http_status (expected $want_status)  [${time_s}s]"
         printf '%s\n' "$body" | python3 -m json.tool 2>/dev/null || printf '%s\n' "$body"
-        (( FAIL++ ))
+        FAIL=$(( FAIL + 1 ))
         return
     fi
 
     if [[ "$want_verdict" != "-" ]]; then
-        verdict=$(printf '%s' "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('verdict',''))" 2>/dev/null || echo "")
+        verdict=$(py "d.get('verdict','')")
         if [[ "$verdict" != "$want_verdict" ]]; then
             red "FAIL  $desc"
-            red "      verdict=${verdict} (expected ${want_verdict})"
+            red "      verdict=${verdict} (expected ${want_verdict})  [${time_s}s]"
             printf '%s\n' "$body" | python3 -m json.tool 2>/dev/null || printf '%s\n' "$body"
-            (( FAIL++ ))
+            FAIL=$(( FAIL + 1 ))
             return
         fi
     fi
 
-    green "PASS  $desc"
-    (( PASS++ ))
+    # Model and token info (only present on successful extraction calls)
+    model_used=$(py "d.get('extraction_model') or ''")
+    in_tok=$(py  "d.get('input_tokens')  or ''")
+    out_tok=$(py "d.get('output_tokens') or ''")
+    if [[ -n "$in_tok" && -n "$out_tok" ]]; then
+        tok_info="  ${in_tok}+${out_tok} tok"
+        TOTAL_IN=$(( TOTAL_IN + in_tok ))
+        TOTAL_OUT=$(( TOTAL_OUT + out_tok ))
+    else
+        tok_info=""
+    fi
+    model_info=""
+    [[ -n "$model_used" ]] && model_info="  ${model_used}"
+
+    green "PASS  $desc  [${time_s}s${model_info}${tok_info}]"
+    PASS=$(( PASS + 1 ))
 }
 
 # ---------------------------------------------------------------------------
@@ -75,57 +102,60 @@ check() {
 printf '\n%s\n' "=== TTB Label Compliance smoke tests → ${BASE_URL} ==="
 echo
 
-# Health
 check "GET /healthz returns 200" \
     200 - \
     -X GET "${BASE_URL}/healthz"
 
-# Beer — single panel (GWS on back only → NONCOMPLIANT)
 check "Beer single panel → NONCOMPLIANT (GWS on back, not submitted)" \
     200 NONCOMPLIANT \
     -X POST "${BASE_URL}/v1/check" \
     -F "front=@test-labels/beer/prairie-creek-lager-front.jpg"
 
-# Beer — two panels (GWS found on back → UNVERIFIABLE, ABV missing)
 check "Beer two panels → UNVERIFIABLE (GWS resolved, ABV absent)" \
     200 UNVERIFIABLE \
     -X POST "${BASE_URL}/v1/check" \
     -F "front=@test-labels/beer/prairie-creek-lager-front.jpg" \
     -F "back=@test-labels/beer/prairie-creek-lager-back.jpg"
 
-# Spirits — two panels (expect COMPLIANT)
 check "Spirits two panels → COMPLIANT" \
     200 COMPLIANT \
     -X POST "${BASE_URL}/v1/check" \
     -F "front=@test-labels/spirits/blue-ridge-rye-front.jpg" \
     -F "back=@test-labels/spirits/blue-ridge-rye-back.jpg"
 
-# Wine — two panels (expect COMPLIANT)
 check "Wine two panels → COMPLIANT" \
     200 COMPLIANT \
     -X POST "${BASE_URL}/v1/check" \
     -F "front=@test-labels/wine/silverleaf-chardonnay-front.jpg" \
     -F "back=@test-labels/wine/silverleaf-chardonnay-back.jpg"
 
-# Input validation — unsupported MIME type → 415
 check "Unsupported Content-Type → 415" \
     415 - \
     -X POST "${BASE_URL}/v1/check" \
     -F "front=@docs/rules/beer-malt.md;type=application/pdf"
 
-# Input validation — valid Content-Type but wrong magic bytes → 415
 check "Valid Content-Type, wrong magic bytes → 415" \
     415 - \
     -X POST "${BASE_URL}/v1/check" \
     -F "front=@docs/rules/beer-malt.md;type=image/jpeg"
 
-# Auth — if API_KEY is set, missing header should return 401
 if [[ -n "$API_KEY" ]]; then
-    check "Missing X-API-Key → 401" \
-        401 - \
+    # Override auth_args for this one test — intentionally send no key
+    response=$(curl -s \
+        -w '\n__META__%{http_code}__%{time_total}' \
         -X POST "${BASE_URL}/v1/check" \
-        -F "front=@test-labels/beer/prairie-creek-lager-front.jpg"
-        # intentionally no auth_header here
+        -F "front=@test-labels/beer/prairie-creek-lager-front.jpg" 2>&1)
+    meta_line=$(printf '%s' "$response" | grep '__META__' || true)
+    http_status=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d__ -f1)
+    time_s=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d__ -f3)
+    TOTAL_TIME=$(python3 -c "print(round(${TOTAL_TIME:-0} + ${time_s:-0}, 3))" 2>/dev/null || echo "$TOTAL_TIME")
+    if [[ "$http_status" == "401" ]]; then
+        green "PASS  Missing X-API-Key → 401  [${time_s}s]"
+        PASS=$(( PASS + 1 ))
+    else
+        red "FAIL  Missing X-API-Key — got HTTP $http_status (expected 401)"
+        FAIL=$(( FAIL + 1 ))
+    fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -134,9 +164,17 @@ fi
 
 echo
 total=$(( PASS + FAIL ))
+total_tok=$(( TOTAL_IN + TOTAL_OUT ))
+
 if [[ $FAIL -eq 0 ]]; then
     green "All ${total} tests passed."
 else
     red "${FAIL} of ${total} tests FAILED."
-    exit 1
 fi
+
+printf 'Time:   %ss total\n' "$TOTAL_TIME"
+if [[ $total_tok -gt 0 ]]; then
+    printf 'Tokens: %s in + %s out = %s total\n' "$TOTAL_IN" "$TOTAL_OUT" "$total_tok"
+fi
+
+[[ $FAIL -eq 0 ]] || exit 1

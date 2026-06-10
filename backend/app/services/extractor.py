@@ -211,14 +211,15 @@ def _extract_single(
     media_type: str,
     panel_hint: str | None,
     model: str,
-) -> tuple[dict | None, ExtractionError | None]:
+) -> tuple[dict | None, ExtractionError | None, int, int]:
     """
     Call the vision model for one panel image via LiteLLM.
 
     Uses the OpenAI messages format (system + user with image_url content).
     LiteLLM translates this to the appropriate wire format for each provider.
 
-    Returns (raw_dict, error).  Exactly one will be non-None.
+    Returns (raw_dict, error, input_tokens, output_tokens).
+    Exactly one of raw_dict/error will be non-None; token counts are 0 on error.
     """
     image_b64 = base64.standard_b64encode(image_bytes).decode()
     panel_note = f"  (This appears to be the {panel_hint} panel.)" if panel_hint else ""
@@ -245,16 +246,20 @@ def _extract_single(
             ],
         )
     except litellm.AuthenticationError as exc:
-        return None, ExtractionError(status_code=401, message=str(exc))
+        return None, ExtractionError(status_code=401, message=str(exc)), 0, 0
     except litellm.RateLimitError as exc:
-        return None, ExtractionError(status_code=429, message=str(exc))
+        return None, ExtractionError(status_code=429, message=str(exc)), 0, 0
     except litellm.BadRequestError as exc:
-        return None, ExtractionError(status_code=400, message=str(exc))
+        return None, ExtractionError(status_code=400, message=str(exc)), 0, 0
     except litellm.APIError as exc:
         status = getattr(exc, "status_code", None)
-        return None, ExtractionError(status_code=status, message=str(exc))
+        return None, ExtractionError(status_code=status, message=str(exc)), 0, 0
     except Exception as exc:
-        return None, ExtractionError(status_code=None, message=str(exc))
+        return None, ExtractionError(status_code=None, message=str(exc)), 0, 0
+
+    usage = getattr(response, "usage", None)
+    input_tokens  = int(getattr(usage, "prompt_tokens",     0) or 0)
+    output_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
 
     raw = response.choices[0].message.content.strip()
     # Strip markdown code fences if the model wraps the JSON despite the instruction
@@ -262,13 +267,13 @@ def _extract_single(
         raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
     try:
-        return json.loads(raw), None
+        return json.loads(raw), None, input_tokens, output_tokens
     except json.JSONDecodeError as exc:
         snippet = raw[:400].replace("\n", " ")
         return None, ExtractionError(
             status_code=None,
             message=f"JSON parse error: {exc} — raw response begins: {snippet}",
-        )
+        ), 0, 0
 
 
 # ---------------------------------------------------------------------------
@@ -282,16 +287,18 @@ def extract(
     back_media_type: str | None = None,
     model: str | None = None,
     fallback_models: list[str] | None = None,
-) -> tuple[ExtractionResult | None, ExtractionError | None, float]:
+) -> tuple[ExtractionResult | None, ExtractionError | None, float, dict | None]:
     """
     Run Layer 1 extraction on one or two panel images.
 
     Tries `model` first; on retryable errors iterates through `fallback_models`
     in order.  Auth errors (401) and bad-request errors (400) are not retried.
 
-    Returns (result, error, duration_ms).
+    Returns (result, error, duration_ms, usage).
     Exactly one of result/error will be non-None.
     duration_ms covers total wall-clock time across all API calls.
+    usage is {"input_tokens": int, "output_tokens": int}, accumulated across
+    all successful panel calls, or None on error.
     """
     model = model or EXTRACTION_MODEL
     fallback_models = fallback_models if fallback_models is not None else EXTRACTION_FALLBACK_MODELS
@@ -302,36 +309,45 @@ def extract(
         img_bytes: bytes,
         media_type: str,
         panel_hint: str | None,
-    ) -> tuple[dict | None, ExtractionError | None]:
+    ) -> tuple[dict | None, ExtractionError | None, int, int]:
         last_error: ExtractionError | None = None
         for m in all_models:
-            raw_dict, err = _extract_single(img_bytes, media_type, panel_hint, m)
+            raw_dict, err, in_tok, out_tok = _extract_single(img_bytes, media_type, panel_hint, m)
             if err is None:
-                return raw_dict, None
+                return raw_dict, None, in_tok, out_tok
             if err.status_code in _NO_RETRY_STATUS_CODES:
-                return None, err  # auth / bad-request: don't try fallbacks
+                return None, err, 0, 0  # auth / bad-request: don't try fallbacks
             last_error = err
-        return None, last_error
+        return None, last_error, 0, 0
 
-    front_dict, err = _extract_with_fallback(front_bytes, front_media_type, "front")
+    front_dict, err, front_in, front_out = _extract_with_fallback(
+        front_bytes, front_media_type, "front"
+    )
     if err:
-        return None, err, (time.monotonic() - t0) * 1000
+        return None, err, (time.monotonic() - t0) * 1000, None
+
+    total_in, total_out = front_in, front_out
 
     if back_bytes and back_media_type:
-        back_dict, err = _extract_with_fallback(back_bytes, back_media_type, "back")
+        back_dict, err, back_in, back_out = _extract_with_fallback(
+            back_bytes, back_media_type, "back"
+        )
         if err:
-            return None, err, (time.monotonic() - t0) * 1000
+            return None, err, (time.monotonic() - t0) * 1000, None
+        total_in  += back_in
+        total_out += back_out
         merged = _merge_panels(front_dict, back_dict)
     else:
         merged = front_dict
 
     duration_ms = (time.monotonic() - t0) * 1000
+    usage = {"input_tokens": total_in, "output_tokens": total_out}
 
     try:
         result = ExtractionResult.from_dict(merged)
     except Exception as exc:
         return None, ExtractionError(
             status_code=None, message=f"Schema parse error: {exc}"
-        ), duration_ms
+        ), duration_ms, None
 
-    return result, None, duration_ms
+    return result, None, duration_ms, usage

@@ -33,12 +33,12 @@ def _result(name: str) -> ExtractionResult:
 
 def _ok(name: str) -> tuple:
     """Mock return value for a successful extraction."""
-    return (_result(name), None, 42.0)
+    return (_result(name), None, 42.0, {"input_tokens": 100, "output_tokens": 50})
 
 
 def _err(status_code: int | None, message: str) -> tuple:
     """Mock return value for a model API failure."""
-    return (None, ExtractionError(status_code=status_code, message=message), 50.0)
+    return (None, ExtractionError(status_code=status_code, message=message), 50.0, None)
 
 
 @pytest.fixture(autouse=True)

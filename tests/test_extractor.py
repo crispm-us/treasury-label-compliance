@@ -35,12 +35,12 @@ def _fixture_dict(name: str) -> dict:
 # Helpers — _extract_single mock return values
 # ---------------------------------------------------------------------------
 
-def _ok(name: str) -> tuple[dict, None]:
-    return (_fixture_dict(name), None)
+def _ok(name: str) -> tuple[dict, None, int, int]:
+    return (_fixture_dict(name), None, 100, 50)
 
 
-def _err(status: int | None, msg: str = "error") -> tuple[None, ExtractionError]:
-    return (None, ExtractionError(status_code=status, message=msg))
+def _err(status: int | None, msg: str = "error") -> tuple[None, ExtractionError, int, int]:
+    return (None, ExtractionError(status_code=status, message=msg), 0, 0)
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ def test_fallback_tried_on_rate_limit():
         return _ok("beer_compliant.json")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _ = extract(
+        result, error, _, _usage = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="primary-model",
@@ -81,7 +81,7 @@ def test_fallback_tried_on_server_error():
         return _ok("beer_compliant.json")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _ = extract(
+        result, error, _, _usage = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="primary-model",
@@ -98,7 +98,7 @@ def test_all_fallbacks_exhausted_returns_last_error():
         return _err(429, f"{model} rate limited")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _ = extract(
+        result, error, _, _usage = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="model-a",
@@ -123,7 +123,7 @@ def test_no_fallback_on_auth_error():
         return _err(401, "invalid key")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _ = extract(
+        result, error, _, _usage = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="primary-model",
@@ -144,7 +144,7 @@ def test_no_fallback_on_bad_request():
         return _err(400, "bad request")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _ = extract(
+        result, error, _, _usage = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="primary-model",
@@ -166,7 +166,7 @@ def test_no_fallback_configured_returns_error_on_failure():
         return _err(429, "rate limited")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _ = extract(
+        result, error, _, _usage = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="only-model",
@@ -183,7 +183,7 @@ def test_success_with_no_fallback():
         return _ok("spirits_compliant.json")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _ = extract(
+        result, error, _, _usage = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="only-model",
