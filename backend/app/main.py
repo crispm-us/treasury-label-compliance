@@ -48,23 +48,25 @@ ALLOWED_MEDIA_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
 class IssueOut(BaseModel):
-    rule_id:  str
-    severity: str   # "error" | "warning"
-    field:    str
-    found:    object
-    expected: str
+    rule_id:   str
+    severity:  str    # "error" | "warning"
+    field:     str
+    found:     object
+    expected:  str
+    not_found: bool   # True when field was absent from the submitted image(s)
 
 
 class CheckResponse(BaseModel):
-    request_id:       str
-    timestamp:        str
-    verdict:          str   # COMPLIANT | NONCOMPLIANT | UNVERIFIABLE | ERROR
-    beverage_class:   str | None
-    issues:           list[IssueOut]
-    extraction_model: str
-    audit_logged:     bool
-    # Future (ADR-011 §"Partial extraction with high-confidence violation"):
-    #   partial_verification: bool
+    request_id:            str
+    timestamp:             str
+    verdict:               str   # COMPLIANT | NONCOMPLIANT | UNVERIFIABLE | ERROR
+    beverage_class:        str | None
+    issues:                list[IssueOut]
+    extraction_model:      str
+    audit_logged:          bool
+    partial_verification:  bool  # True when NONCOMPLIANT but some mandatory fields
+                                 # were not_found (violation confirmed, full check impossible)
+                                 # See ADR-011 §"Partial extraction with high-confidence violation"
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +130,12 @@ async def check_label(
         compliance     = ComplianceResult(verdict="ERROR", beverage_class=None, issues=[])
         extraction_dict = None
 
+    # --- partial_verification flag ---------------------------------------------
+    partial_verification = (
+        compliance.verdict == "NONCOMPLIANT"
+        and any(i.not_found for i in compliance.issues)
+    )
+
     # --- Audit -----------------------------------------------------------------
     write_entry({
         "request_id":             request_id,
@@ -157,11 +165,13 @@ async def check_label(
                 field=i.field,
                 found=i.found,
                 expected=i.expected,
+                not_found=i.not_found,
             )
             for i in compliance.issues
         ],
         extraction_model=EXTRACTION_MODEL,
         audit_logged=AUDIT_ENABLED,
+        partial_verification=partial_verification,
     )
 
 

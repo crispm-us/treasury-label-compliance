@@ -107,6 +107,9 @@ class Issue:
     field:    str                          # JSON field name from ExtractionFields
     found:    Any                          # extracted value (or None)
     expected: str                          # human-readable expectation / CFR citation
+    not_found: bool = False                # True when field was absent from the image
+                                           # (confidence="not_found"); used to set the
+                                           # partial_verification flag in API responses
 
 
 @dataclass
@@ -160,6 +163,7 @@ def _check_mandatory(
         issues.append(Issue(
             rule_id=rule_id, severity="warning", field=field_name, found=None,
             expected=f"{label} not visible in provided images — verify field is present on label",
+            not_found=True,
         ))
         return False
     if fv.value is None:
