@@ -19,13 +19,29 @@ import uuid
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Security, UploadFile
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
-from backend.app.config import AUDIT_ENABLED, EXTRACTION_MODEL
+from backend.app.config import API_KEY, AUDIT_ENABLED, EXTRACTION_MODEL
 from backend.app.services.audit import write_entry
 from backend.app.services.compliance_checker import ComplianceResult, check_compliance
 from backend.app.services.extractor import ExtractionError, extract
+
+# ---------------------------------------------------------------------------
+# Optional API key authentication
+# ---------------------------------------------------------------------------
+# Set the API_KEY environment variable to require X-API-Key on all requests.
+# Leave unset (or empty) for local development — no auth enforced.
+# In Railway: add API_KEY to the environment dashboard before sharing the URL.
+
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+async def _require_api_key(key: str | None = Security(_api_key_header)) -> None:
+    if API_KEY and key != API_KEY:
+        raise HTTPException(status_code=401, detail="Missing or invalid X-API-Key header.")
+
 
 # ---------------------------------------------------------------------------
 # App
@@ -73,7 +89,7 @@ class CheckResponse(BaseModel):
 # Route
 # ---------------------------------------------------------------------------
 
-@app.post("/v1/check", response_model=CheckResponse)
+@app.post("/v1/check", response_model=CheckResponse, dependencies=[Security(_require_api_key)])
 async def check_label(
     front: Annotated[
         UploadFile,

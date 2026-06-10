@@ -38,6 +38,16 @@ You are an expert at reading alcoholic beverage labels for TTB regulatory \
 compliance. Extract the requested fields from the label image and return a \
 single JSON object. Do not explain or add commentary — return only the JSON \
 object, with no markdown code fences.
+
+Critical accuracy rules:
+- Only transcribe text that is visually present and legible in the image.
+- Do NOT reproduce text from memory or training data, especially the Government \
+Warning Statement. If the GWS text is partially obscured or cut off, use \
+confidence "low" — do not complete it from memory.
+- Do NOT infer or guess field values. If a field is not clearly visible, use \
+"not_found" or "low" confidence as appropriate.
+- If you are uncertain whether text you see is the GWS or something else, \
+transcribe exactly what is printed and use confidence "low".
 """
 
 _USER_TEMPLATE = """\
@@ -83,7 +93,8 @@ Confidence rules (apply to every field):
 
 Additional extraction rules:
   gws_header / gws_body : transcribe verbatim, exactly as printed including
-                          punctuation and capitalisation.
+                          punctuation and capitalization. Do NOT complete
+                          from memory if text is cut off — use confidence "low".
   abv_pct               : numeric only, no % sign  (e.g. 5.2 not "5.2%").
   proof                 : numeric only, no "Proof" word  (e.g. 94.0).
   gws_header_bold / gws_body_bold : true if the text visually appears bold,
@@ -122,13 +133,23 @@ def _merge_panels(front: dict, back: dict) -> dict:
     Merge two single-panel extraction dicts into one.
 
     Per ADR-011: for each field take the value with the higher confidence;
-    ties go to the non-null value.  Top-level metadata comes from front.
-    panels_provided is the union of both.
+    ties go to the non-null value.
+
+    Top-level metadata:
+      readable        — True if EITHER panel is readable (fix: front=unreadable,
+                        back=legible must not produce an ERROR verdict).
+      beverage_class  — non-null value wins; front preferred on tie.
+      panels_provided — union of both.
+      extraction_model / schema_version — taken from front.
     """
     merged = dict(front)
     merged["panels_provided"] = sorted(
         set(front.get("panels_provided", []) + back.get("panels_provided", []))
     )
+    # readable: True if either panel is readable
+    merged["readable"] = front.get("readable", False) or back.get("readable", False)
+    # beverage_class: prefer non-null
+    merged["beverage_class"] = front.get("beverage_class") or back.get("beverage_class")
 
     front_fields: dict = front.get("fields", {})
     back_fields: dict  = back.get("fields", {})

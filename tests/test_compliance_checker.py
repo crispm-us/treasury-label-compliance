@@ -231,3 +231,34 @@ def test_spirits_partial_noncompliant_documented():
     # response should include a top-level flag  partial_verification: true  so
     # the UI can display: "Violation found AND some fields could not be verified —
     # submit a complete label image to check all mandatory fields."
+
+
+# ---------------------------------------------------------------------------
+# Empty-string bypass fix  (regression — 2026-06-10)
+# ---------------------------------------------------------------------------
+
+def test_empty_string_mandatory_field_is_treated_as_absent():
+    """
+    _check_mandatory must treat an empty-string value as absent, not present.
+    A model that returns {"value": "", "confidence": "high"} for brand_name
+    should produce the same R-MB-01 error as {"value": null, "confidence": "high"}.
+    """
+    import copy
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["brand_name"] = {"value": "", "confidence": "high"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    assert r.verdict == "NONCOMPLIANT"
+    error_rules = {i.rule_id for i in r.errors}
+    assert "R-MB-01" in error_rules, (
+        "Empty-string brand_name with high confidence must raise R-MB-01 error"
+    )
+
+
+def test_whitespace_only_mandatory_field_is_treated_as_absent():
+    """Same as above but with a whitespace-only value."""
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["brand_name"] = {"value": "   ", "confidence": "high"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    assert r.verdict == "NONCOMPLIANT"
+    error_rules = {i.rule_id for i in r.errors}
+    assert "R-MB-01" in error_rules

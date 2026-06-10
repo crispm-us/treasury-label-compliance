@@ -220,3 +220,18 @@ __marimo__/
 # macOS
 .DS_Store
 **/.DS_Store
+
+# -----------------------------------------------------------------------
+# Project-specific
+# -----------------------------------------------------------------------
+
+# Audit logs contain extracted label data — never commit
+audit_logs/
+
+# Environment files (use .env.example for the template)
+.env
+.env.*
+!.env.example
+
+# Sandbox/pytest stale cache directories
+pytest-cache-files-*/

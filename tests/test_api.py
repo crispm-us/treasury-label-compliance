@@ -149,7 +149,8 @@ def test_noncompliant_beer_R_GW_01(client):
     assert body["verdict"] == "NONCOMPLIANT"
     error_rules = [i["rule_id"] for i in body["issues"] if i["severity"] == "error"]
     assert "R-GW-01" in error_rules
-    assert body["partial_verification"] is False
+    # partial_verification=True because the fixture also has abv_pct=not_found (R-MB-03 warning)
+    assert body["partial_verification"] is True
 
 
 def test_noncompliant_spirits_R_GW_03(client):
@@ -293,3 +294,73 @@ def test_unsupported_back_media_type_returns_415(client):
         },
     )
     assert r.status_code == 415
+
+
+# ---------------------------------------------------------------------------
+# API key authentication
+# ---------------------------------------------------------------------------
+
+def test_api_key_required_when_configured(client, monkeypatch):
+    """When API_KEY is set, a request without X-API-Key must get 401."""
+    monkeypatch.setattr("backend.app.main.API_KEY", "test-secret-key")
+    with patch("backend.app.main.extract", return_value=_ok("beer_compliant.json")):
+        r = client.post(
+            "/v1/check",
+            files={"front": ("front.jpg", _JPEG, "image/jpeg")},
+        )
+    assert r.status_code == 401
+
+
+def test_api_key_accepted_when_correct(client, monkeypatch):
+    """Correct X-API-Key must pass through to a 200 response."""
+    monkeypatch.setattr("backend.app.main.API_KEY", "test-secret-key")
+    with patch("backend.app.main.extract", return_value=_ok("beer_compliant.json")):
+        r = client.post(
+            "/v1/check",
+            headers={"X-API-Key": "test-secret-key"},
+            files={"front": ("front.jpg", _JPEG, "image/jpeg")},
+        )
+    assert r.status_code == 200
+
+
+def test_api_key_not_required_when_unset(client, monkeypatch):
+    """When API_KEY is empty (local dev), requests without the header must succeed."""
+    monkeypatch.setattr("backend.app.main.API_KEY", "")
+    with patch("backend.app.main.extract", return_value=_ok("beer_compliant.json")):
+        r = client.post(
+            "/v1/check",
+            files={"front": ("front.jpg", _JPEG, "image/jpeg")},
+        )
+    assert r.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Two-panel readable merge  (regression — 2026-06-10)
+# ---------------------------------------------------------------------------
+
+def test_readable_merge_uses_either_panel(client):
+    """
+    _merge_panels must mark the result readable=True when the back panel is
+    readable even if the front panel is not.  This is tested end-to-end via
+    a beer_compliant fixture that was modified to have readable=False on the
+    front dict, with the merge already applied in the extractor.  We test the
+    pure merge function directly here.
+    """
+    from backend.app.services.extractor import _merge_panels
+
+    front = {
+        "schema_version": "1.0", "readable": False, "beverage_class": None,
+        "panels_provided": ["front"], "extraction_model": "test",
+        "fields": {}
+    }
+    back = {
+        "schema_version": "1.0", "readable": True, "beverage_class": "beer",
+        "panels_provided": ["back"], "extraction_model": "test",
+        "fields": {}
+    }
+    merged = _merge_panels(front, back)
+    assert merged["readable"] is True, (
+        "readable must be True when back panel is readable, even if front is not"
+    )
+    assert merged["panels_provided"] == ["back", "front"]
+    assert merged["beverage_class"] == "beer"

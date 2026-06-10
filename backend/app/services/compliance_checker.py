@@ -166,10 +166,12 @@ def _check_mandatory(
             not_found=True,
         ))
         return False
-    if fv.value is None:
+    # Treat empty / whitespace-only strings as absent (model sometimes returns "" instead of null)
+    value_absent = fv.value is None or (isinstance(fv.value, str) and not fv.value.strip())
+    if value_absent:
         sev: Literal["error", "warning"] = "error" if fv.confidence == "high" else "warning"
         issues.append(Issue(
-            rule_id=rule_id, severity=sev, field=field_name, found=None,
+            rule_id=rule_id, severity=sev, field=field_name, found=fv.value,
             expected=f"{label} must be present on label",
         ))
         return False
@@ -209,6 +211,7 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
                 "Government Warning Statement not visible in provided images — "
                 "verify it appears on label (27 CFR §16.21)"
             ),
+            not_found=True,
         ))
         return  # Cannot check R-GW-02/03 without text
 
@@ -242,7 +245,8 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
         issues.append(Issue(
             rule_id="R-GW-03", severity="warning",
             field="gws_header", found=None,
-            expected="GWS header text not visible — cannot verify all-caps bold formatting",
+            expected="GWS header text not visible — cannot verify all-caps formatting",
+            not_found=True,
         ))
 
     # R-GW-02: body must match verbatim canonical text
@@ -270,6 +274,7 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
             rule_id="R-GW-02", severity="warning",
             field="gws_body", found=None,
             expected="GWS body text not fully visible — cannot verify verbatim compliance",
+            not_found=True,
         ))
 
     # R-GW-04: header bold, body NOT bold — DEFERRED
@@ -299,6 +304,7 @@ def _check_beer(f: ExtractionFields, issues: list[Issue]) -> None:
                 "or contains flavor-derived alcohol (27 CFR §7.63(a)(3)). "
                 "Not required for traditional beer/ale/lager/stout."
             ),
+            not_found=f.abv_pct.confidence == "not_found",
         ))
 
 
@@ -392,6 +398,7 @@ def _check_wine(f: ExtractionFields, issues: list[Issue]) -> None:
                 "(27 CFR §4.32(b)(3)). Virtually all commercially produced wine contains "
                 "measurable sulfites — verify SO₂ level before release."
             ),
+            not_found=f.sulfite_declaration.confidence == "not_found",
         ))
 
     # R-WN-08: vintage requires appellation
