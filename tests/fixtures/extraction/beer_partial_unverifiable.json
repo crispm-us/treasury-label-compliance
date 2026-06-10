@@ -1,0 +1,28 @@
+{
+  "_comment": "Beer label — front panel only submitted. Bottler name and address not found (may be on back panel). All visible fields compliant. Expected verdict: UNVERIFIABLE. Expected warnings: [R-MB-05 x2 (bottler name, bottler address), R-MB-03 (ABV not visible)].",
+  "schema_version": "1.0",
+  "readable": true,
+  "beverage_class": "beer",
+  "panels_provided": ["front"],
+  "extraction_model": "fixture",
+  "fields": {
+    "brand_name":           {"value": "CASCADE FALLS BREWING",     "confidence": "high"},
+    "class_type":           {"value": "INDIA PALE ALE",            "confidence": "high"},
+    "abv_pct":              {"value": null,                        "confidence": "not_found"},
+    "abv_text":             {"value": null,                        "confidence": "not_found"},
+    "proof":                {"value": null,                        "confidence": "not_found"},
+    "net_contents_metric":  {"value": "355 mL",                    "confidence": "high"},
+    "net_contents_us":      {"value": "12 FL OZ",                  "confidence": "high"},
+    "bottler_name":         {"value": null,                        "confidence": "not_found"},
+    "bottler_address":      {"value": null,                        "confidence": "not_found"},
+    "country_of_origin":    {"value": null,                        "confidence": "not_found"},
+    "gws_present":          {"value": null,                        "confidence": "not_found"},
+    "gws_header":           {"value": null,                        "confidence": "not_found"},
+    "gws_body":             {"value": null,                        "confidence": "not_found"},
+    "gws_header_bold":      {"value": null,                        "confidence": "not_found"},
+    "gws_body_bold":        {"value": null,                        "confidence": "not_found"},
+    "sulfite_declaration":  {"value": null,                        "confidence": "not_found"},
+    "vintage":              {"value": null,                        "confidence": "not_found"},
+    "appellation":          {"value": null,                        "confidence": "not_found"}
+  }
+}

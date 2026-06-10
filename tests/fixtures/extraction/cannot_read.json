@@ -1,0 +1,28 @@
+{
+  "_comment": "Image was not readable by the model (too blurry, corrupt file, or completely obscured). Expected verdict: ERROR. No rules applied.",
+  "schema_version": "1.0",
+  "readable": false,
+  "beverage_class": null,
+  "panels_provided": ["front"],
+  "extraction_model": "fixture",
+  "fields": {
+    "brand_name":           {"value": null, "confidence": "not_found"},
+    "class_type":           {"value": null, "confidence": "not_found"},
+    "abv_pct":              {"value": null, "confidence": "not_found"},
+    "abv_text":             {"value": null, "confidence": "not_found"},
+    "proof":                {"value": null, "confidence": "not_found"},
+    "net_contents_metric":  {"value": null, "confidence": "not_found"},
+    "net_contents_us":      {"value": null, "confidence": "not_found"},
+    "bottler_name":         {"value": null, "confidence": "not_found"},
+    "bottler_address":      {"value": null, "confidence": "not_found"},
+    "country_of_origin":    {"value": null, "confidence": "not_found"},
+    "gws_present":          {"value": null, "confidence": "not_found"},
+    "gws_header":           {"value": null, "confidence": "not_found"},
+    "gws_body":             {"value": null, "confidence": "not_found"},
+    "gws_header_bold":      {"value": null, "confidence": "not_found"},
+    "gws_body_bold":        {"value": null, "confidence": "not_found"},
+    "sulfite_declaration":  {"value": null, "confidence": "not_found"},
+    "vintage":              {"value": null, "confidence": "not_found"},
+    "appellation":          {"value": null, "confidence": "not_found"}
+  }
+}
