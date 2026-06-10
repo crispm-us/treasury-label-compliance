@@ -62,6 +62,33 @@ Every label evaluation event writes one log record. The log is **append-only** a
 }
 ```
 
+### API receipt response
+
+Every label evaluation response — from both the extract (Mode B) and verify (Mode A) endpoints — includes a `receipt` object alongside the compliance result. This allows API clients to confirm what was received and processed, and to reference a specific evaluation when reporting errors or disputes.
+
+```json
+{
+  "receipt": {
+    "event_id":           "uuid4 — links to the audit log entry",
+    "image_id":           "SHA-256 hex digest of the original image bytes as received",
+    "received_at":        "ISO 8601 UTC timestamp — when the server received the request",
+    "model_used":         "actual model that produced the extraction (may differ from primary if fallback triggered)",
+    "preprocessing_applied": "boolean — true if image was resized or converted before sending to model",
+    "backoff_attempt":    "integer — 0 = normal path; 1+ = retried at higher resolution"
+  },
+  "compliant": true,
+  "beverage_type": "spirits",
+  "fields": { ... },
+  "issues": [ ... ]
+}
+```
+
+The `image_id` in the receipt is the same SHA-256 used in the audit log — a client who retains their original image can re-submit it, confirm the SHA-256 matches, and know the verdict was made on the same bytes.
+
+**Web UI treatment:** The receipt is present in the underlying API response but rendered as a collapsed disclosure element ("Show evaluation receipt ▾") below the compliance verdict. It is not part of the primary compliance workflow for agents, but it is accessible for audit purposes without hunting through server logs.
+
+**Cross-reference:** See requirements-analysis.md FR-07.
+
 ### What is NOT logged
 
 - The image itself (images are not persisted per NFR-06 / R-MS-05)

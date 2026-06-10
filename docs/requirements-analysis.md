@@ -143,6 +143,22 @@ Note: Alcohol content is **not** universally mandatory for beer — it is only r
 - Single-label UI sends batch of one
 - Batch UI deferred to v2
 
+### FR-07: Evaluation receipt in API response
+
+Every response from the label check endpoint (Modes A and B) must include a `receipt` object containing:
+- `event_id` — UUID linking this response to the server-side audit log entry
+- `image_id` — SHA-256 hex digest of the original image bytes as received by the server
+- `received_at` — ISO 8601 UTC timestamp of when the request was received
+- `model_used` — the model that actually produced the extraction result (may differ from the configured primary if fallback was triggered)
+- `preprocessing_applied` — boolean; true if the image was resized or format-converted before being sent to the model
+- `backoff_attempt` — integer; 0 for the normal path, 1+ if the image was retried at a higher resolution
+
+This allows clients to retain a tamper-evident record of what was submitted and how it was processed, enabling investigation of disputed verdicts without requiring server log access.
+
+**Web UI:** The receipt is included in the underlying response payload but displayed as a collapsed disclosure element below the compliance verdict ("Show evaluation receipt ▾"). It is not part of the primary compliance workflow but must not be hidden entirely.
+
+**Cross-reference:** ADR-010 for audit log schema and the server-side record that `event_id` links to.
+
 ### FR-06: Result display
 - Prominent pass/fail indicator (green/red, unambiguous)
 - Extracted fields table with confidence indicators
