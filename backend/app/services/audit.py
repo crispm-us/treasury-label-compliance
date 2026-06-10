@@ -33,8 +33,10 @@ multi-provider support is out of scope until after the real-label pilot.
   401  → Invalid or expired API key.
          Action: ops alert → check key rotation; do NOT retry.
 
-  402  → Spending cap reached (Anthropic-specific).
+  400  → Spending cap / zero balance (Anthropic-specific; message contains
+         "credit balance is too low").
          Action: billing alert → add funds or raise limit; do NOT retry.
+         Note: Anthropic uses 400 for this, not 402 as originally assumed.
 
   429  → Rate-limited.
          Action: infra → exponential back-off + request queue (see ADR-008).

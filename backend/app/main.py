@@ -14,6 +14,7 @@ Docs (auto-generated):
 """
 from __future__ import annotations
 
+import dataclasses
 import uuid
 from datetime import datetime, timezone
 from typing import Annotated
@@ -122,7 +123,7 @@ async def check_label(
     # --- Layer 2: compliance check ---------------------------------------------
     if result is not None:
         compliance = check_compliance(result)
-        extraction_dict = result.__dict__  # for audit; serialised via json.dumps default=str
+        extraction_dict = dataclasses.asdict(result)  # recursively converts nested dataclasses
     else:
         compliance     = ComplianceResult(verdict="ERROR", beverage_class=None, issues=[])
         extraction_dict = None

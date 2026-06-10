@@ -179,8 +179,25 @@ def _check_mandatory(
 def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
     """R-GW-01, R-GW-02, R-GW-03.  R-GW-04 deferred (bold detection unreliable in v1)."""
 
+    # Determine whether the GWS is effectively present.
+    # The model occasionally produces contradictory output: gws_present=false while
+    # still extracting header/body text.  Text evidence takes precedence — if either
+    # text field has a value the GWS is present regardless of the flag.
+    header_found = f.gws_header.confidence != "not_found" and f.gws_header.value is not None
+    body_found   = f.gws_body.confidence   != "not_found" and f.gws_body.value   is not None
+    gws_text_present = header_found or body_found
+
+    if gws_text_present:
+        gws_effectively_present: bool | None = True
+    elif f.gws_present.value is True:
+        gws_effectively_present = True
+    elif f.gws_present.value is False:
+        gws_effectively_present = False
+    else:
+        gws_effectively_present = None  # not_found / no signal
+
     # R-GW-01: GWS must be present
-    if f.gws_present.confidence == "not_found" or f.gws_present.value is None:
+    if gws_effectively_present is None:
         issues.append(Issue(
             rule_id="R-GW-01", severity="warning",
             field="gws_present", found=None,
@@ -189,9 +206,9 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
                 "verify it appears on label (27 CFR §16.21)"
             ),
         ))
-        return  # Cannot check R-GW-02/03 without knowing GWS exists
+        return  # Cannot check R-GW-02/03 without text
 
-    if f.gws_present.value is False:
+    if not gws_effectively_present:
         sev = "error" if f.gws_present.confidence == "high" else "warning"
         issues.append(Issue(
             rule_id="R-GW-01", severity=sev,

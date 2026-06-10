@@ -33,7 +33,7 @@ AUDIT_ENABLED: bool = os.getenv("AUDIT_ENABLED", "true").lower() not in {"false"
 # Paths
 # ---------------------------------------------------------------------------
 
-REPO_ROOT: Path = Path(__file__).parents[3]
+REPO_ROOT: Path = Path(__file__).parents[2]  # backend/app/config.py → repo root
 AUDIT_LOG_DIR: Path = REPO_ROOT / "audit_logs"
 
 # ---------------------------------------------------------------------------
