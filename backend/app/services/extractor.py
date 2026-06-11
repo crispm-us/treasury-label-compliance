@@ -185,10 +185,14 @@ def _merge_panels(front: dict, back: dict) -> dict:
     front_fields: dict = front.get("fields", {})
     back_fields: dict  = back.get("fields", {})
 
+    _not_found: dict[str, Any] = {"value": None, "confidence": "not_found"}
     merged_fields: dict[str, Any] = {}
     for name in set(front_fields) | set(back_fields):
-        fv = front_fields.get(name, {"value": None, "confidence": "not_found"})
-        bv = back_fields.get(name, {"value": None, "confidence": "not_found"})
+        # Guard: model may return JSON null for a field instead of the expected
+        # {"value": null, "confidence": "not_found"} object.  Treat any non-dict
+        # as not_found so the merge does not crash with a TypeError.
+        fv = front_fields.get(name) or _not_found
+        bv = back_fields.get(name) or _not_found
         fr, br = _CONF_RANK.get(fv["confidence"], 0), _CONF_RANK.get(bv["confidence"], 0)
         if fr > br:
             chosen = fv

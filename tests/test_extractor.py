@@ -394,3 +394,37 @@ def test_not_found_with_non_null_value_returns_extraction_error():
     assert raw_dict is None
     assert err is not None
     assert "not_found" in err.message
+
+
+# ---------------------------------------------------------------------------
+# _merge_panels: null field values from model
+# ---------------------------------------------------------------------------
+
+def test_merge_panels_null_field_value_does_not_crash():
+    """
+    Regression for TypeError: 'NoneType' object is not subscriptable.
+
+    The model occasionally returns JSON null for a whole field object instead
+    of the expected {"value": null, "confidence": "not_found"} dict.
+    _merge_panels must treat a null field value as not_found rather than
+    crashing when it tries to subscript None.
+    """
+    base = _fixture_dict("beer_compliant.json")
+
+    # Simulate the back panel returning null for two fields
+    back = dict(base)
+    back["fields"] = dict(base["fields"])
+    back["fields"]["brand_name"] = None        # null field object
+    back["fields"]["net_contents_us"] = None   # null field object
+    back["panels_provided"] = ["back"]
+
+    front = dict(base)
+    front["panels_provided"] = ["front"]
+
+    merged = _merge_panels(front, back)
+
+    # Fields that were null on back should fall back to the front panel value
+    assert merged["fields"]["brand_name"] is not None
+    assert merged["fields"]["brand_name"]["confidence"] != "not_found"
+    # net_contents_us: front fixture has a value; back null must not override it
+    assert merged["fields"]["net_contents_us"] is not None
