@@ -341,7 +341,9 @@ def extract(
             back_bytes, back_media_type, "back"
         )
         if err:
-            return None, err, (time.monotonic() - t0) * 1000, None
+            # Front tokens were billed; include them in partial usage for audit.
+            partial_usage = {"input_tokens": total_in, "output_tokens": total_out}
+            return None, err, (time.monotonic() - t0) * 1000, partial_usage
         total_in  += back_in
         total_out += back_out
         merged = _merge_panels(front_dict, back_dict)
@@ -356,6 +358,6 @@ def extract(
     except Exception as exc:
         return None, ExtractionError(
             status_code=None, message=f"Schema parse error: {exc}"
-        ), duration_ms, None
+        ), duration_ms, usage
 
     return result, None, duration_ms, usage

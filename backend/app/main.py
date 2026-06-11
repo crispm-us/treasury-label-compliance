@@ -132,9 +132,9 @@ class CheckResponse(BaseModel):
     issues:                list[IssueOut]
     extraction_model:      str
     audit_logged:          bool
-    partial_verification:  bool  # True when NONCOMPLIANT but some mandatory fields
-                                 # were not_found (violation confirmed, full check impossible)
-                                 # See ADR-011 §"Partial extraction with high-confidence violation"
+    partial_verification:  bool  # True when NONCOMPLIANT and any issue has not_found=True
+                                 # (violation confirmed but at least one field was not visible,
+                                 # so the full picture may differ). See ADR-011.
     input_tokens:          int | None   # prompt tokens charged by the model API (None on error)
     output_tokens:         int | None   # completion tokens charged by the model API (None on error)
 
