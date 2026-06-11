@@ -63,7 +63,15 @@ curl -X POST https://<URL>/v1/check \
 
 ---
 
-## 5. Real label testing (complete before submitting to interviewers)
+## 5. Smoke-test coverage gaps (address before Railway deployment)
+
+- [ ] **WebP upload smoke test** — add a `check` call using a `.webp` test label to confirm the WebP magic-byte path works end-to-end. The upload validation accepts WebP but no smoke test exercises it.
+
+- [ ] **413 oversized file smoke test** — add a `check` call with a temp file exceeding 10 MB to confirm the size limit returns 413 from the live endpoint. Unit tests cover this path; a live check confirms Railway's request size config doesn't interfere.
+
+---
+
+## 6. Real label testing (complete before submitting to interviewers)
 
 Synthetic labels are sufficient for demonstrating the architecture, but real label scans will reveal edge cases (model hallucinations, OCR ambiguity, non-standard layouts). Test at minimum:
 

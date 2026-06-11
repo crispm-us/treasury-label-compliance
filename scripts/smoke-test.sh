@@ -12,6 +12,10 @@
 
 set -uo pipefail
 
+# Always run from the repo root regardless of where the script is invoked from.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT" || exit 1
+
 BASE_URL="${BASE_URL:-http://localhost:8000}"
 API_KEY="${API_KEY:-}"
 PASS=0
@@ -26,10 +30,6 @@ TOTAL_OUT=0
 
 green()  { printf '\033[32m%s\033[0m\n' "$*"; }
 red()    { printf '\033[31m%s\033[0m\n' "$*"; }
-
-auth_args() {
-    [[ -n "$API_KEY" ]] && printf '%s' "-H X-API-Key:${API_KEY}" || true
-}
 
 # py <expr> — evaluate a Python one-liner against $body (set before calling)
 py() { printf '%s' "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print($1)" 2>/dev/null || echo ""; }
@@ -80,8 +80,8 @@ check() {
 
     # Model and token info (only present on successful extraction calls)
     model_used=$(py "d.get('extraction_model') or ''")
-    in_tok=$(py  "d.get('input_tokens')  or ''")
-    out_tok=$(py "d.get('output_tokens') or ''")
+    in_tok=$(py  "'' if d.get('input_tokens')  is None else d['input_tokens']")
+    out_tok=$(py "'' if d.get('output_tokens') is None else d['output_tokens']")
     if [[ -n "$in_tok" && -n "$out_tok" ]]; then
         tok_info="  ${in_tok}+${out_tok} tok"
         TOTAL_IN=$(( TOTAL_IN + in_tok ))
@@ -141,7 +141,7 @@ check "Valid Content-Type, wrong magic bytes → 415" \
     -F "front=@docs/rules/beer-malt.md;type=image/jpeg"
 
 if [[ -n "$API_KEY" ]]; then
-    # Override auth_args for this one test — intentionally send no key
+    # Send no key intentionally — expects 401
     response=$(curl -s \
         -w '\n__META__%{http_code}|%{time_total}' \
         -X POST "${BASE_URL}/v1/check" \
@@ -158,6 +158,8 @@ if [[ -n "$API_KEY" ]]; then
         red "FAIL  Missing X-API-Key — got HTTP $http_status (expected 401)"
         FAIL=$(( FAIL + 1 ))
     fi
+else
+    printf '(auth test skipped — export API_KEY=<secret> to run it)\n'
 fi
 
 # ---------------------------------------------------------------------------
