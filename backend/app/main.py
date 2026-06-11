@@ -17,7 +17,10 @@ from __future__ import annotations
 import dataclasses
 import uuid
 from datetime import datetime, timezone
+from io import BytesIO
 from typing import Annotated
+
+from PIL import Image, ImageOps
 
 from fastapi import FastAPI, File, HTTPException, Security, UploadFile
 from fastapi.security import APIKeyHeader
@@ -69,6 +72,37 @@ MAX_IMAGE_BYTES: int = 10 * 1024 * 1024  # 10 MB per image
 # Content-Type header supplied by the client.
 _JPEG_MAGIC = b"\xff\xd8\xff"
 _PNG_MAGIC  = b"\x89PNG\r\n\x1a\n"
+
+
+def _apply_exif_rotation(data: bytes, media_type: str) -> tuple[bytes, str]:
+    """
+    Correct image orientation using EXIF metadata before model ingestion.
+
+    Phone cameras embed orientation in EXIF rather than rotating pixels, so the
+    raw bytes can be 90° (or 180°) off from what a human sees on screen.
+    Sending a rotated image to the vision model causes GWS transcription errors:
+    the model can read the short all-caps header but produces garbled or
+    hallucinated body text for the long paragraph read sideways.
+
+    Pillow's exif_transpose() applies the EXIF rotation to pixel data and strips
+    the orientation tag so the model always receives an upright image.
+
+    Returns (corrected_bytes, new_media_type).  If no EXIF rotation is needed
+    the original bytes and media_type are returned unchanged (zero cost).  On any
+    Pillow error the originals are returned so the request still reaches the model.
+    """
+    try:
+        img = Image.open(BytesIO(data))
+        rotated = ImageOps.exif_transpose(img)
+        if rotated is img:
+            return data, media_type          # No rotation needed — return original
+        if rotated.mode not in ("RGB", "L"):
+            rotated = rotated.convert("RGB") # JPEG requires RGB (not RGBA / P)
+        buf = BytesIO()
+        rotated.save(buf, format="JPEG", quality=90)
+        return buf.getvalue(), "image/jpeg"
+    except Exception:
+        return data, media_type              # Fallback: send original to model
 
 
 def _sniff_media_type(data: bytes) -> str | None:
@@ -171,8 +205,10 @@ async def check_label(
 
     # --- Read and validate uploads ----------------------------------------------
     front_bytes, front_media_type = await _read_validated(front, "front")
+    front_bytes, front_media_type = _apply_exif_rotation(front_bytes, front_media_type)
     if back:
         back_bytes, back_media_type = await _read_validated(back, "back")
+        back_bytes, back_media_type = _apply_exif_rotation(back_bytes, back_media_type)
     else:
         back_bytes, back_media_type = None, None
 

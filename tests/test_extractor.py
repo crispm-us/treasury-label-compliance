@@ -428,3 +428,29 @@ def test_merge_panels_null_field_value_does_not_crash():
     assert merged["fields"]["brand_name"]["confidence"] != "not_found"
     # net_contents_us: front fixture has a value; back null must not override it
     assert merged["fields"]["net_contents_us"] is not None
+
+
+def test_merge_panels_bool_field_value_does_not_crash():
+    """
+    Regression for TypeError: 'bool' object is not subscriptable.
+
+    The model occasionally returns a bare JSON boolean for a field (e.g.
+    "gws_present": true) instead of {"value": true, "confidence": "high"}.
+    Unlike the null case, True is truthy so the previous `or _not_found`
+    guard did not catch it — True["confidence"] raised TypeError.
+    _merge_panels must treat any non-dict field value as not_found.
+    """
+    base = _fixture_dict("beer_compliant.json")
+
+    back = dict(base)
+    back["fields"] = dict(base["fields"])
+    back["fields"]["gws_present"] = True   # bare boolean — model skipped the wrapper
+    back["panels_provided"] = ["back"]
+
+    front = dict(base)
+    front["panels_provided"] = ["front"]
+
+    # Must not raise; front value should win since back is treated as not_found
+    merged = _merge_panels(front, back)
+    assert merged["fields"]["gws_present"] is not None
+    assert isinstance(merged["fields"]["gws_present"], dict)

@@ -188,11 +188,17 @@ def _merge_panels(front: dict, back: dict) -> dict:
     _not_found: dict[str, Any] = {"value": None, "confidence": "not_found"}
     merged_fields: dict[str, Any] = {}
     for name in set(front_fields) | set(back_fields):
-        # Guard: model may return JSON null for a field instead of the expected
-        # {"value": null, "confidence": "not_found"} object.  Treat any non-dict
-        # as not_found so the merge does not crash with a TypeError.
-        fv = front_fields.get(name) or _not_found
-        bv = back_fields.get(name) or _not_found
+        # Guard: model may return a non-dict value for a field instead of the
+        # expected {"value": ..., "confidence": ...} object.  Observed cases:
+        #   JSON null  → None  (e.g. "gws_present": null)
+        #   JSON bool  → True/False (e.g. "gws_present": true)
+        # The previous `or _not_found` guard handled null (falsy) but not True
+        # (truthy), causing `True["confidence"]` → TypeError.  isinstance is
+        # the correct check: only a dict is a valid field object.
+        _raw_fv = front_fields.get(name)
+        _raw_bv = back_fields.get(name)
+        fv = _raw_fv if isinstance(_raw_fv, dict) else _not_found
+        bv = _raw_bv if isinstance(_raw_bv, dict) else _not_found
         fr, br = _CONF_RANK.get(fv["confidence"], 0), _CONF_RANK.get(bv["confidence"], 0)
         if fr > br:
             chosen = fv
