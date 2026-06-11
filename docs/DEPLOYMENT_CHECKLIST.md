@@ -110,7 +110,7 @@ Synthetic labels are sufficient for demonstrating the architecture, but real lab
 
 **HEIC rejection test:** `beer/stiegl-radler-grapefruit-front.heic` — submit to verify 415 is returned for iPhone HEIC uploads.
 
-The smoke test (`scripts/smoke-test.sh`) includes real-label calls for Henninger and Stiegl pairs.
+The smoke test (`scripts/smoke-test.sh`) includes real-label calls for Henninger, Stiegl, Heineken, Ron Ron, and Delirium Tremens can.
 
 #### Wine
 
@@ -122,12 +122,32 @@ The smoke test (`scripts/smoke-test.sh`) includes real-label calls for Henninger
 | Loic Bulliat Bibine 2023, Beaujolais-Villages (imported FR) | `wine/bulliat-bibine-real-front.jpg` | `wine/bulliat-bibine-real-back.jpg` | Standard two-panel |
 | The "Ron Ron" Sauvignon 2023, Loire Valley (imported FR) | `wine/ron-ron-sauvignon-real-front.jpg` | `wine/ron-ron-sauvignon-real-back.jpg` | ⚠ GWS header in mixed case — R-GW-03 candidate |
 
+### Multi-panel test matrix
+
+For each product below, the "front-only" submission is the **failure case** — it exercises the path where compliance-critical content (typically the GWS) is absent from the submitted panel. The "front+back" submission is the **expected success path**. Verdicts marked `unverified*` are predictions based on label content; update after first run.
+
+| Product | Front-only expected | Front+back expected | Notes |
+|---|---|---|---|
+| Henninger Lager | UNVERIFIABLE (GWS on separate GWS face) | — (use front + gws face) | ✓ smoke tested |
+| Stiegl Radler | NONCOMPLIANT (GWS absent front) | UNVERIFIABLE (ABV absent on both panels) | ✓ smoke tested |
+| Budweiser | NONCOMPLIANT (GWS absent front) | unverified* | GWS on side/back panel |
+| Delirium Tremens bottle | NONCOMPLIANT (GWS absent front) | unverified* | |
+| Delirium Tremens can | NONCOMPLIANT (GWS absent front) | unverified* | Use front + gws face; side face has ABV/net contents only |
+| Heineken Original | NONCOMPLIANT (GWS absent front) | unverified* | ✓ front-only smoke tested |
+| Sierra Nevada Pale Ale | NONCOMPLIANT (GWS absent front) | unverified* | |
+| Auchere Sancerre | NONCOMPLIANT (GWS absent front) | unverified* | |
+| Baci di Sangiovese | NONCOMPLIANT (GWS absent front) | unverified* | |
+| Brumes Tour Blanche | NONCOMPLIANT (GWS absent front) | unverified* | Use front + back-a; back-c confirms 375 ml |
+| Bulliat Bibine | NONCOMPLIANT (GWS absent front) | unverified* | |
+| Ron Ron Sauvignon | NONCOMPLIANT (GWS absent front) | **NONCOMPLIANT** (R-GW-03: mixed-case header) | ✓ front+back smoke tested; GWS header reads "Government Warning:" not all-caps |
+
+`unverified*` — run `bash scripts/smoke-test.sh` with a live model to confirm; then update this table.
+
 ### To-do before interviewer submission
 
 - [ ] Run Henninger front + GWS smoke test; document result in `docs/project-log.md`
 - [ ] Run Stiegl two-panel smoke test; document result
-- [ ] Run Ron Ron two-panel test; note whether R-GW-03 fires on mixed-case GWS header
-- [ ] Run Delirium Tremens can front + GWS test; document three-panel strategy
+- [ ] Run all `unverified*` rows through `smoke-test.sh`; update table with confirmed verdicts
 - [ ] Acquire and test a spirits bottle — front + back panels
 
 ---

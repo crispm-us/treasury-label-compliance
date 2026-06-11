@@ -1,5 +1,7 @@
 # Requirements Analysis
 
+> **Historical document.** This is the original stakeholder spec written at project start. Many functional requirements here (Mode A verify-harness, React UI, batch upload, 5 s SLA, HEIC conversion, receipt object in API response) were deliberately deferred. For what is actually built, see [`IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md). When this doc conflicts with `IMPLEMENTATION_STATUS.md` or the code, those win.
+
 **Project:** AI-Powered Alcohol Label Verification Prototype
 **Date:** 2026-06-09
 **Sources:** TTB.gov, 27 CFR Parts 4, 5, 7, 16 (eCFR), stakeholder interviews

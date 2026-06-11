@@ -62,6 +62,18 @@ uv run uvicorn backend.app.main:app --reload
 
 The API is now running at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
 
+Run the smoke tests to confirm the full stack:
+
+```bash
+bash scripts/smoke-test.sh
+```
+
+---
+
+## Scope
+
+This prototype implements the two-layer extraction + compliance architecture with 61 tests, real-label smoke tests, and a three-provider fallback chain. Several features from the original spec (React UI, Mode A verify harness, batch upload, HEIC conversion) were deliberately deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
+
 ---
 
 ## Usage
@@ -180,12 +192,15 @@ Provider API keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, etc.) are read automatica
 
 ## Project documentation
 
-- [`docs/adr/`](docs/adr/) — Architecture Decision Records (ADR-001 through ADR-011)
+See [`docs/README.md`](docs/README.md) for a reading-order guide and audience map.
+
+- [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) — What is built vs. deliberately deferred; read this before the ADRs
+- [`docs/adr/`](docs/adr/) — Architecture Decision Records (ADR-001 through ADR-011); see [`docs/adr/README.md`](docs/adr/README.md) for status of each
 - [`docs/rules/`](docs/rules/) — TTB rule reference by beverage class
-- [`docs/requirements-analysis.md`](docs/requirements-analysis.md) — Regulatory scope and rule mapping
+- [`docs/requirements-analysis.md`](docs/requirements-analysis.md) — Original stakeholder spec (historical; many FRs deferred)
 - [`docs/latency-benchmarks.md`](docs/latency-benchmarks.md) — Observed extraction latency across four models; benchmark script usage
-- [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) — What is built vs. deliberately deferred; authoritative source on scope
-- [`docs/DEPLOYMENT_CHECKLIST.md`](docs/DEPLOYMENT_CHECKLIST.md) — Pre-push and Railway deployment steps
+- [`docs/DEPLOYMENT_CHECKLIST.md`](docs/DEPLOYMENT_CHECKLIST.md) — Pre-push hygiene, Railway deployment, and real-label test matrix
+- [`test-labels/README.md`](test-labels/README.md) — Test label corpus: synthetic fixtures, defect coverage, and real label pairs
 
 ---
 

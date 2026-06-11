@@ -162,7 +162,7 @@ Three alternatives were considered and rejected:
 
 Three rules have special handling in v1:
 
-**R-GW-04 — GWS bold text requirement.** `gws_header_bold` and `gws_body_bold` are captured in the schema for forward compatibility. In v1 the checker ignores them. Vision-model bold detection is unreliable without a calibrated baseline. These fields will be activated once a reference set of known-bold and known-non-bold labels is assembled. See ADR-008.
+**R-GW-04 — GWS bold text requirement.** `gws_header_bold` and `gws_body_bold` are captured in the schema for forward compatibility. In v1 the checker ignores them. Vision-model bold detection is unreliable without a calibrated baseline. These fields will be activated once a reference set of known-bold and known-non-bold labels is assembled. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md) for deferred rule tracking.
 
 **R-MB-03 — ABV on malt beverages.** ABV is not universally mandatory for malt beverages (required only above 0.5% in some jurisdictions). A missing `abv_pct` on a beer label fires an R-MB-03 warning, never an error. Upgrading to error-severity is deferred pending rules clarification.
 
@@ -186,6 +186,6 @@ The documented fixture for this case is `tests/fixtures/extraction/spirits_parti
 
 - **ADR-009** — defines the two-layer architecture; this ADR formalises the contract between Layer 1 and Layer 2.
 - **ADR-008** — covers image preprocessing and the retry/escalation strategy that feeds into Layer 1.
-- **ADR-010** (if written) — covers the API contract; `partial_verification` flag design belongs there.
+- **ADR-010** — covers audit logging; `partial_verification` flag is documented there.
 
 This ADR supersedes the sketch in ADR-009 §"Layer 1: Extraction schema."

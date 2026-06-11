@@ -1,7 +1,9 @@
 # ADR-003: Dual-Mode Input Design
 
 Date: 2026-06-09
-Status: Accepted
+Status: Accepted — **not implemented in prototype**
+
+> **Prototype status:** Mode A (verify submitted field values) was not built. The API implements Mode B only: image → vision extraction → compliance check. Tests mock the extraction layer to avoid model API calls on every test run — which achieves the same CI goal Mode A was designed for. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
 
 ## Context
 

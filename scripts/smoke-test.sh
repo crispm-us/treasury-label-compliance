@@ -178,6 +178,33 @@ check "Stiegl Radler real two-panel → 200 (flavored malt beverage, imported)" 
     -F "front=@test-labels/beer/stiegl-radler-grapefruit-front.jpg" \
     -F "back=@test-labels/beer/stiegl-radler-grapefruit-back.jpg"
 
+# Multi-panel demonstration: front-only failure vs. front+back resolution.
+# Heineken: GWS is on back panel — front-only → NONCOMPLIANT; adding back resolves it.
+check "Heineken real front only → 200 (NONCOMPLIANT expected — GWS on back panel)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/beer/heineken-original-real-front.jpg"
+
+check "Heineken real front+back → 200 (expected COMPLIANT or UNVERIFIABLE after GWS resolved)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/beer/heineken-original-real-front.jpg" \
+    -F "back=@test-labels/beer/heineken-original-real-back.jpg"
+
+# Delirium Tremens can: 3-panel cylinder — front+gws-face is the correct two-panel submission.
+check "Delirium Tremens can real front+gws → 200 (3-panel; expected COMPLIANT or UNVERIFIABLE)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/beer/delirium-tremens-can-real-front.jpg" \
+    -F "back=@test-labels/beer/delirium-tremens-can-real-gws.jpg"
+
+# Ron Ron Sauvignon: GWS header is in mixed case — should trigger R-GW-03 → NONCOMPLIANT.
+check "Ron Ron Sauvignon real front+back → 200 (NONCOMPLIANT expected — R-GW-03 mixed-case GWS)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/wine/ron-ron-sauvignon-real-front.jpg" \
+    -F "back=@test-labels/wine/ron-ron-sauvignon-real-back.jpg"
+
 if [[ -n "$API_KEY" ]]; then
     # Send no key intentionally — expects 401
     response=$(curl -s \

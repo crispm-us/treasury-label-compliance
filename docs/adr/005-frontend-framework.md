@@ -1,7 +1,9 @@
 # ADR-005: Frontend Framework and Image Input Design
 
 Date: 2026-06-09
-Status: Accepted
+Status: Accepted — **not implemented in prototype**
+
+> **Prototype status:** The React + Vite UI, drag-and-drop upload, and the base64 JSON endpoint described below were not built. This is an API-only prototype. The actual endpoint is `POST /v1/check` with multipart form-data (not `/api/v1/labels/check` with JSON). See [`README.md`](../../README.md) for the real API contract and [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md) for scope rationale.
 
 ## Context
 

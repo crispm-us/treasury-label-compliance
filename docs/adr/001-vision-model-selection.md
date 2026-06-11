@@ -17,9 +17,9 @@ We have valid API keys for: Anthropic, OpenAI, Google, and OpenRouter.
 
 ## Decision
 
-### Provider tier structure
+### Provider tier structure (original design)
 
-Three providers are wired in, forming a priority-ordered fallback chain:
+Three providers were originally planned as a priority-ordered fallback chain:
 
 | Tier | Model | Provider | Role |
 |---|---|---|---|
@@ -27,11 +27,19 @@ Three providers are wired in, forming a priority-ordered fallback chain:
 | Fallback-1 | `claude-haiku-4-5-20251001` | Anthropic | First failover — still cheap, very fast |
 | Fallback-2 | `claude-sonnet-4-6` | Anthropic | Second failover — higher quality, higher cost |
 
-A third provider (OpenAI `gpt-4o`) is configured as a fourth-tier fallback for extreme availability scenarios but is not expected to activate in normal operation.
+**Current prototype configuration (updated 2026-06-11):** Based on latency benchmarking — see [`docs/latency-benchmarks.md`](../latency-benchmarks.md).
+
+| Tier | Model | Provider | Role |
+|---|---|---|---|
+| Primary | `gemini/gemini-2.5-flash-lite` | Google | 2.55 s single-panel; 5.11 s two-panel; correct verdicts on all test labels |
+| Fallback-1 | `anthropic/claude-haiku-4-5-20251001` | Anthropic | 3.77 s / 7.75 s; consistent quality; activated on 5xx / timeout |
+| Fallback-2 | `openai/gpt-5.4-nano` | OpenAI | 4.05 s single / 11.82 s two-panel; last resort; quality regression noted (UNVERIFIABLE instead of NONCOMPLIANT on single-panel beer) |
 
 ### Fallback mechanics
 
-The LiteLLM Python library handles the fallback chain natively:
+> **Implementation note:** The fallback is implemented via manual model iteration in `backend/app/services/extractor.py`, not the LiteLLM `fallbacks=` parameter. The `EXTRACTION_FALLBACK_MODELS` env var holds a comma-separated list; the extractor iterates on retryable errors (5xx, timeout) and stops on non-retryable errors (400, 401). See ADR-002 for library choice rationale.
+
+Original design used LiteLLM's native fallback parameter:
 
 ```python
 response = litellm.completion(
@@ -47,7 +55,7 @@ response = litellm.completion(
 )
 ```
 
-If the primary model exceeds `timeout` or returns an error, LiteLLM automatically tries the next tier. No application logic changes required.
+The prototype diverged from this to gain explicit control over which error codes trigger fallback: 4xx errors indicating bad keys or malformed requests are not retried; 5xx and timeouts are.
 
 ### SLA target
 

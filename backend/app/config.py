@@ -35,8 +35,8 @@ MODEL_TIMEOUT_SECONDS        Per-call timeout passed to litellm.completion().
                              Default: 30.0 seconds.
                              Note: 4.5 s (original ADR-001 target) is not achievable for
                              vision calls with two images on Claude Haiku at P90 — observed
-                             latency is 8–9 s. See docs/adr/001-model-selection.md and the
-                             latency analysis in docs/adr/010-audit-logging.md for details.
+                             latency is 8–9 s. See docs/adr/001-vision-model-selection.md
+                             and docs/latency-benchmarks.md for details.
                              Recommended minimums: 20 s (Haiku), 12 s (Gemini Flash-Lite).
 
 API keys (read by LiteLLM from the environment automatically)

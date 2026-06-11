@@ -11,7 +11,11 @@ The app requires: multi-provider fallback (see ADR-001), a single call interface
 
 ## Decision
 
-Use the **LiteLLM Python library** as the sole model abstraction layer. The multi-provider fallback chain described in ADR-001 is implemented entirely through library parameters (`fallbacks`, `timeout`, `num_retries`) — no separate process, no HTTP hop, no infrastructure.
+Use the **LiteLLM Python library** as the sole model abstraction layer. No separate process, no HTTP hop, no infrastructure.
+
+> **Implementation note:** The fallback chain is implemented via manual model iteration in `backend/app/services/extractor.py` rather than the `litellm.completion(fallbacks=[...])` parameter. This divergence was chosen to gain explicit per-error-code control: 400/401 errors (bad key, bad request) stop the chain immediately; 5xx and timeouts try the next model. The `EXTRACTION_FALLBACK_MODELS` env var holds a comma-separated ordered list. All model configuration remains in environment variables — no code changes needed to adjust the chain.
+
+Original design called for using `litellm.completion` library parameters directly:
 
 ```python
 # backend/app/services/model_client.py
@@ -27,8 +31,6 @@ def call_vision_model(image_b64: str, prompt: str) -> str:
     )
     return response.choices[0].message.content
 ```
-
-All model configuration (primary, fallbacks, timeout) comes from environment variables. No code changes are needed to adjust the model chain.
 
 ## Consequences
 
