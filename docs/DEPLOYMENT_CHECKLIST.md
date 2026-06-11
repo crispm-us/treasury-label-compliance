@@ -136,39 +136,40 @@ The smoke test (`scripts/smoke-test.sh`) includes real-label calls for Henninger
 
 ### Multi-panel test matrix
 
-For each product below, the "front-only" submission is the **failure case** — it exercises the path where compliance-critical content (typically the GWS) is absent from the submitted panel. The "front+back" submission is the **expected success path**. Verdicts marked `unverified*` are predictions based on label content; update after first run.
+For each product below, the "front-only" submission exercises the path where compliance-critical content (typically the GWS) is absent from the submitted panel; the "front+back" submission is the expected success path. Verdicts marked ✓ are confirmed from a smoke-test run against Gemini Flash Lite (2026-06-11). `unverified*` entries have not been tested against a live model.
 
-| Product | Front-only expected | Front+back expected | Notes |
+| Product | Front-only | Front+back | Notes |
 |---|---|---|---|
-| Tito's Vodka | NONCOMPLIANT (GWS on back panel) | unverified* | GWS confirmed on back label |
-| JD Old No. 7 EU 70cl | **NONCOMPLIANT** (no GWS — European label) | — (front only; no back) | Non-US label; no GWS required in EU |
-| Jack Daniel's Old No. 7 | NONCOMPLIANT (GWS not on front panel) | NONCOMPLIANT (GWS absent both panels) | ⚠ No GWS visible in either photo — may require a third shot |
-| Glenfiddich 12 | NONCOMPLIANT (GWS not on front panel) | unverified* | GWS on back ✓ (rotated 90°) — expect COMPLIANT or UNVERIFIABLE |
-| Glenlivet 12 | NONCOMPLIANT (GWS not on front panel) | unverified* | GWS on back ✓ (rotated 90°); proof+ABV both present — expect COMPLIANT or UNVERIFIABLE |
-| Henninger Lager | UNVERIFIABLE (GWS on separate GWS face) | — (use front + gws face) | ✓ smoke tested |
-| Stiegl Radler | NONCOMPLIANT (GWS absent front) | UNVERIFIABLE (ABV absent on both panels) | ✓ smoke tested |
-| Budweiser | NONCOMPLIANT (GWS absent front) | unverified* | GWS on side/back panel |
-| Delirium Tremens bottle | NONCOMPLIANT (GWS absent front) | unverified* | |
-| Delirium Tremens can | NONCOMPLIANT (GWS absent front) | unverified* | Use front + gws face; side face has ABV/net contents only |
-| Heineken Original | NONCOMPLIANT (GWS absent front) | unverified* | ✓ front-only smoke tested |
-| Sierra Nevada Pale Ale | NONCOMPLIANT (GWS absent front) | unverified* | |
-| Auchere Sancerre | NONCOMPLIANT (GWS absent front) | unverified* | |
-| Baci di Sangiovese | NONCOMPLIANT (GWS absent front) | unverified* | |
-| Brumes Tour Blanche | NONCOMPLIANT (GWS absent front) | unverified* | Use front + back-a; back-c confirms 375 ml |
-| Bulliat Bibine | NONCOMPLIANT (GWS absent front) | unverified* | |
-| Ron Ron Sauvignon | NONCOMPLIANT (GWS absent front) | **NONCOMPLIANT** (R-GW-03: mixed-case header) | ✓ front+back smoke tested; GWS header reads "Government Warning:" not all-caps |
-| Angry Orchard Iceman | NONCOMPLIANT (GWS absent front) | unverified* | Wine category; CONTAINS SULFITES present — R-WN-09 exercise |
-| Mike's Harder Lemonade | NONCOMPLIANT (GWS absent front) | unverified* | Flavored malt beverage; GWS vertical on back |
+| Tito's Vodka | NONCOMPLIANT ✓ (R-GW-01, R-DS-04, R-DS-03) | **COMPLIANT** ✓ | Only confirmed COMPLIANT two-panel spirits in corpus; GWS on back is correctly found |
+| JD Old No. 7 EU 70cl | NONCOMPLIANT ✓ (R-GW-01) | — (front only) | Non-US label; no GWS |
+| Jack Daniel's Old No. 7 | NONCOMPLIANT ✓ (R-GW-01) | NONCOMPLIANT ✓ (R-GW-01) | ⚠ No GWS visible in either photo — needs a third shot |
+| Glenfiddich 12 | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | GWS on back rotated 90°; header read at high confidence but body fails verbatim check |
+| Glenlivet 12 | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ (R-GW-03, R-GW-02, R-DS-06 — all warnings) | GWS rotated 90°; low-confidence reads → warnings only → UNVERIFIABLE; R-DS-06 = bottler address not found |
+| Henninger Lager | NONCOMPLIANT ✓ (R-GW-01, R-MB-04, R-MB-05 ×2) | UNVERIFIABLE ✓ (R-MB-04, R-MB-05 ×2) | Submitted as front+GWS; GWS found ✓; net contents and bottler info on third (importer) face |
+| Stiegl Radler | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | ⚠ Previous prediction was UNVERIFIABLE — model finds 2.5% ABV on label; actual COMPLIANT |
+| Budweiser | NONCOMPLIANT (predicted) | unverified* | |
+| Delirium Tremens bottle | NONCOMPLIANT (predicted) | unverified* | |
+| Delirium Tremens can | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | Submitted as front+GWS; GWS body text on can fails verbatim check |
+| Heineken Original | NONCOMPLIANT ✓ (R-GW-01, R-MB-04, R-MB-05 ×2) | **COMPLIANT** ✓ | |
+| Sierra Nevada Pale Ale | NONCOMPLIANT (predicted) | unverified* | |
+| Auchere Sancerre | NONCOMPLIANT (predicted) | unverified* | |
+| Baci di Sangiovese | NONCOMPLIANT (predicted) | unverified* | |
+| Brumes Tour Blanche | NONCOMPLIANT (predicted) | unverified* | Use front + back-a |
+| Bulliat Bibine | NONCOMPLIANT (predicted) | unverified* | |
+| Ron Ron Sauvignon | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03) | GWS header "Government Warning:" — not all-caps |
+| Angry Orchard Iceman | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03, R-GW-02) | Wine category; GWS header and body both fail verbatim check |
+| Mike's Harder Lemonade | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03, R-GW-02) | GWS header missing colon; body mismatch; also: model hallucinated abv_pct=5.0 (label says 8%) |
 
-`unverified*` — run `bash scripts/smoke-test.sh` with a live model to confirm; then update this table.
+`unverified*` — not yet run through `smoke-test.sh`; add to script and re-run to confirm.
 
 ### To-do before interviewer submission
 
-- [ ] Run Henninger front + GWS smoke test; document result in `docs/project-log.md`
-- [ ] Run Stiegl two-panel smoke test; document result
-- [ ] Run all `unverified*` rows through `smoke-test.sh`; update table with confirmed verdicts
-- [ ] Run spirits real-label smoke tests (Jack Daniel's, Glenfiddich, Glenlivet); document results in `docs/project-log.md`
+- [x] Run Henninger front + GWS smoke test — UNVERIFIABLE; GWS found ✓; net contents/bottler on third face
+- [x] Run Stiegl two-panel smoke test — COMPLIANT ✓ (model finds 2.5% ABV; earlier UNVERIFIABLE prediction was wrong)
+- [x] Run spirits real-label smoke tests — Tito's front+back COMPLIANT ✓; JD front+back NONCOMPLIANT (R-GW-01); Glenfiddich NONCOMPLIANT (R-GW-02); Glenlivet UNVERIFIABLE (low-confidence GWS read, rotated 90°)
+- [ ] Run remaining `unverified*` rows: Budweiser, Delirium Tremens bottle, Sierra Nevada, Auchere Sancerre, Baci di Sangiovese, Brumes Tour Blanche, Bulliat Bibine
 - [ ] Photograph GWS panel for Jack Daniel's — neither current image captures it
+- [ ] Document smoke-test results and model anomalies (Mike's Harder abv_pct hallucination, Glenlivet UNVERIFIABLE) in `docs/project-log.md`
 
 ---
 
