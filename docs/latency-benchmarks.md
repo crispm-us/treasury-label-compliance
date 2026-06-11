@@ -6,48 +6,83 @@ Use `scripts/benchmark-latency.sh` to reproduce or extend.
 
 ---
 
-## 2026-06-11 — Gemini 2.5 Flash-Lite vs. Haiku (research)
+## 2026-06-11 — Initial Flash-Lite measurement (pre-benchmark-script)
 
-**Setup:** localhost, uvicorn single worker, `AUDIT_ENABLED=false`, no fallback chain.
+**Setup:** localhost, uvicorn single worker, manual curl batches. First batch is cold; second is warm.
 
-### Gemini 2.5 Flash-Lite (`gemini/gemini-2.5-flash-lite`)
+### Gemini 2.5 Flash-Lite — cold vs. warm
 
-| Scenario | Run 1 | Run 2 | Run 3 | Avg (warm) |
+| Scenario | Run 1 | Run 2 | Run 3 | Avg |
 |---|---|---|---|---|
-| Single panel (beer) — cold batch | 2.710s | 2.199s | 2.528s | 2.479s |
-| Single panel (beer) — warm batch | 1.861s | 2.315s | 1.524s | **1.900s** |
-| Two panel (spirits) — cold batch | 5.082s | 4.439s | 3.940s | 4.487s |
-| Two panel (spirits) — warm batch | 3.844s | 4.157s | 3.899s | **3.967s** |
+| Single panel (beer) — cold | 2.710s | 2.199s | 2.528s | 2.479s |
+| Single panel (beer) — warm | 1.861s | 2.315s | 1.524s | **1.900s** |
+| Two panel (spirits) — cold | 5.082s | 4.439s | 3.940s | 4.487s |
+| Two panel (spirits) — warm | 3.844s | 4.157s | 3.899s | **3.967s** |
 
-Notes:
-- First batch of a session shows higher latency on run 1 (connection setup, model cache cold). The warm batch is the representative steady-state number.
-- Output tokens: 1,281 for the two-panel spirits call. Haiku typically produces ~400–500 for the same schema. Flash-Lite is a thinking model; the extra tokens are internal reasoning counted in output billing, not additional response text.
-- Verdict: `COMPLIANT` — extraction quality confirmed correct on the Blue Ridge Rye two-panel pair.
+---
 
-### Claude Haiku 4.5 (`anthropic/claude-haiku-4-5-20251001`) — from latency research
+## 2026-06-11 — Three-provider benchmark (`scripts/benchmark-latency.sh -n 3`)
 
-Not directly measured on Zulu. Figures from provider documentation and community benchmarks (see ADR-001 §Latency note):
+**Setup:** localhost, uvicorn single worker, `AUDIT_ENABLED=false`, no fallback chain, 1 warm-up request per scenario before timed runs.
 
-| Scenario | Typical | P90 |
-|---|---|---|
-| Single panel | 4–7s | ~7s |
-| Two panel | 5–9s | 7–9s |
+### Results
+
+| Model | Single panel avg | Two panel avg | Notes |
+|---|---|---|---|
+| `gemini/gemini-2.5-flash-lite` | **2.550s** | **5.111s** ⚠ | 1 HTTP 500 on two-panel run 3 (excluded from avg) |
+| `anthropic/claude-haiku-4-5-20251001` | 3.773s | 7.748s | Consistent; no errors |
+| `openai/gpt-5.4-nano` | 4.054s | 11.823s | High variance (8.9–16.2s); quality regression (see below) |
+
+### Raw timings
+
+**gemini/gemini-2.5-flash-lite**
+
+| Scenario | Run 1 | Run 2 | Run 3 | Avg | Tokens (in+out) |
+|---|---|---|---|---|---|
+| Single panel | 2.598s | 2.581s | 2.471s | 2.550s | 1429+609 |
+| Two panel | 5.226s | 4.995s | ✗ 500 | 5.111s | 2858+~1290 |
+
+**anthropic/claude-haiku-4-5-20251001**
+
+| Scenario | Run 1 | Run 2 | Run 3 | Avg | Tokens (in+out) |
+|---|---|---|---|---|---|
+| Single panel | 3.120s | 4.142s | 4.057s | 3.773s | 2634+~619 |
+| Two panel | 7.846s | 7.761s | 7.635s | 7.748s | 5268+~1261 |
+
+**openai/gpt-5.4-nano**
+
+| Scenario | Run 1 | Run 2 | Run 3 | Avg | Tokens (in+out) |
+|---|---|---|---|---|---|
+| Single panel | 4.202s | 3.551s | 4.409s | 4.054s | 2405+~500 |
+| Two panel | 10.398s | 16.156s | 8.915s | 11.823s | 4810+~1073 |
+
+### Quality observations
+
+- **Flash-Lite and Haiku** both returned `NONCOMPLIANT` on the single-panel beer front — correct (GWS is on the back panel, not submitted).
+- **gpt-5.4-nano** returned `UNVERIFIABLE` on all three single-panel runs. This is a quality regression: the label is readable, and the expected verdict is `NONCOMPLIANT`. Nano appears to be marking the GWS fields as `not_found` rather than `gws_present=false`, which produces UNVERIFIABLE instead of NONCOMPLIANT. The extraction prompt was developed against Flash-Lite and Haiku; nano may require prompt tuning.
+- **Flash-Lite HTTP 500** on two-panel run 3: transient API error. The fallback chain (Haiku) would handle this in production. Not seen on any other run.
+
+### Input token comparison
+
+Flash-Lite encodes the same image at significantly fewer input tokens than Haiku (1,429 vs 2,634 for a single panel). This contributes to Flash-Lite's latency advantage beyond raw decode speed.
 
 ---
 
 ## Summary comparison
 
-| Model | Single panel avg | Two panel avg | vs. 5s target |
-|---|---|---|---|
-| `gemini/gemini-2.5-flash-lite` | ~1.9s | ~4.0s | ✅ within target |
-| `anthropic/claude-haiku-4-5-20251001` | ~5s (est.) | ~7–9s P90 | ❌ exceeds target |
-| `openai/gpt-5.4-nano` | — | — | pending key |
+| Model | Single panel | Two panel | Quality | vs. 5s target |
+|---|---|---|---|---|
+| `gemini/gemini-2.5-flash-lite` | 2.55s | 5.11s | ✅ Correct verdicts | ✅ Single; ⚠ Two-panel borderline |
+| `anthropic/claude-haiku-4-5-20251001` | 3.77s | 7.75s | ✅ Correct verdicts | ❌ Two-panel exceeds |
+| `openai/gpt-5.4-nano` | 4.05s | 11.82s | ⚠ Quality regression | ❌ Both exceed |
 
-Flash-Lite meets the original stakeholder target (< 5 s, see ADR-001) for two-panel calls on Haiku. Haiku did not.
+Flash-Lite is the clear primary choice. Haiku is the correct fallback-1 (reliable, correct). gpt-5.4-nano is not recommended as fallback without prompt tuning — quality regression outweighs cost savings.
 
 ---
 
 ## Running the benchmark
+
+Each model gets its own isolated uvicorn instance (port 8099). Before each scenario, the script sends one untimed warm-up request to prime the provider connection and any server-side caches. The `-n N` runs that follow are the timed measurements. So `-n 3` means 4 total API calls per scenario: 1 warm-up + 3 timed. Averages exclude non-200 responses and `verdict=ERROR` runs.
 
 ```bash
 # Default: 3 runs, Gemini Flash-Lite + Haiku

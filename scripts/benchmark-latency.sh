@@ -2,18 +2,29 @@
 # benchmark-latency.sh — measure extraction latency per model
 #
 # Starts and stops a dedicated uvicorn instance for each model so results are
-# isolated. Run from the repo root. Requires uv and the test-labels directory.
+# isolated. Requires uv and the test-labels directory.
 #
 # Usage:
 #   ./scripts/benchmark-latency.sh                        # defaults: 3 runs, Gemini + Haiku
 #   ./scripts/benchmark-latency.sh -n 5                   # 5 runs, default models
 #   ./scripts/benchmark-latency.sh -n 3 openai/gpt-5.4-nano
-#   ./scripts/benchmark-latency.sh -n 5 gemini/gemini-2.5-flash-lite anthropic/claude-haiku-4-5-20251001 openai/gpt-5.4-nano
+#   ./scripts/benchmark-latency.sh -n 5 \
+#       gemini/gemini-2.5-flash-lite \
+#       anthropic/claude-haiku-4-5-20251001 \
+#       openai/gpt-5.4-nano
+#
+# Optional overrides (match smoke-test.sh convention):
+#   API_KEY=secret ./scripts/benchmark-latency.sh
 
 set -euo pipefail
 
+# Always run from the repo root regardless of invocation location.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT" || exit 1
+
 # ── Defaults ──────────────────────────────────────────────────────────────────
 RUNS=3
+API_KEY="${API_KEY:-}"
 DEFAULT_MODELS=(
     "gemini/gemini-2.5-flash-lite"
     "anthropic/claude-haiku-4-5-20251001"
@@ -33,6 +44,12 @@ while getopts "n:" opt; do
     esac
 done
 shift $((OPTIND - 1))
+
+# Validate RUNS is a positive integer
+[[ "$RUNS" =~ ^[1-9][0-9]*$ ]] || {
+    echo "ERROR: -n must be a positive integer (got: $RUNS)" >&2
+    exit 1
+}
 
 if [[ $# -gt 0 ]]; then
     MODELS=("$@")
@@ -60,7 +77,7 @@ start_server() {
         > /tmp/benchmark-uvicorn.log 2>&1 &
     SERVER_PID=$!
 
-    # wait up to 10s for the server to accept connections
+    # Wait up to 10s for the server to accept connections.
     local retries=20
     while (( retries-- > 0 )); do
         curl -sf "${BASE_URL}/healthz" >/dev/null 2>&1 && return 0
@@ -74,61 +91,96 @@ stop_server() {
     if [[ -n "$SERVER_PID" ]]; then
         kill "$SERVER_PID" 2>/dev/null || true
         wait "$SERVER_PID" 2>/dev/null || true
+        sleep 0.3   # brief grace period so the port is released before the next model's server starts
         SERVER_PID=""
     fi
 }
 
-# ── Timing helpers ────────────────────────────────────────────────────────────
-# Runs RUNS requests, prints per-run timing + verdict, prints avg at the end.
+# ── Helpers ───────────────────────────────────────────────────────────────────
+# Extract a Python expression from a JSON response file.
+py_field() { python3 -c "import json; d=json.load(open('$1')); print($2)" 2>/dev/null || echo "?"; }
+
+# ── Scenario runner ───────────────────────────────────────────────────────────
+# Runs one untimed warm-up then RUNS timed requests.
+# Reports per-run timing, verdict, token counts, and an average over successful (HTTP 200, verdict≠ERROR) runs only.
 run_scenario() {
     local label="$1"; shift
     local form_args=("$@")
-    local tmpfile times=() total=0 errors=0
+    local tmpfile times=() bad_runs=0
 
-    printf "  %-28s" "$label"
-    printf "\n"
-
+    printf "  %s\n" "$label"
     tmpfile=$(mktemp)
+
+    # Warm-up: one untimed request to prime the provider connection and any caches.
+    # Aligns with the "warm batch" numbers in docs/latency-benchmarks.md.
+    if ! curl -s -o /dev/null \
+        ${API_KEY:+-H "X-API-Key:${API_KEY}"} \
+        -X POST "${BASE_URL}/v1/check" \
+        "${form_args[@]}" >/dev/null 2>&1; then
+        printf "    ⚠  warm-up request failed — run 1 may reflect cold-start latency\n"
+    fi
+
     for (( i=1; i<=RUNS; i++ )); do
-        t=$(curl -s -o "$tmpfile" -X POST "${BASE_URL}/v1/check" \
+        # Body goes to tmpfile; http_code|time_total is captured from --write-out.
+        meta=$(curl -s -o "$tmpfile" \
+            ${API_KEY:+-H "X-API-Key:${API_KEY}"} \
+            -X POST "${BASE_URL}/v1/check" \
             "${form_args[@]}" \
-            --write-out "%{time_total}")
-        verdict=$(python3 -c \
-            "import sys,json; print(json.load(open('$tmpfile')).get('verdict','?'))" \
-            2>/dev/null || echo "?")
-        [[ "$verdict" == "ERROR" ]] && (( errors++ )) || true
-        times+=("$t")
+            --write-out '%{http_code}|%{time_total}')
+        http_status="${meta%|*}"
+        t="${meta#*|}"
+
+        if [[ "$http_status" != "200" ]]; then
+            (( bad_runs++ )) || true
+            printf "    run %d: %6.3fs  ✗ HTTP %s" "$i" "$t" "$http_status"
+            [[ "$http_status" == "401" ]] && printf "  (set API_KEY=<key> to authenticate)"
+            printf "\n"
+            continue
+        fi
+
+        verdict=$(py_field "$tmpfile" "d.get('verdict','?')")
+        in_tok=$(py_field "$tmpfile" "d.get('input_tokens','')")
+        out_tok=$(py_field "$tmpfile" "d.get('output_tokens','')")
+        tok_info=""
+        [[ -n "$in_tok" && "$in_tok" != "?" && -n "$out_tok" && "$out_tok" != "?" ]] \
+            && tok_info="  ${in_tok}+${out_tok} tok"
+
         if [[ "$verdict" == "ERROR" ]]; then
-            printf "    run %d: %6.3fs  ⚠  ERROR (check API key / model string)\n" "$i" "$t"
+            (( bad_runs++ )) || true
+            # Excluded from avg — ERROR indicates model/key failure, not representative latency.
+            printf "    run %d: %6.3fs  ⚠  verdict=ERROR (check model string / API key)\n" "$i" "$t"
         else
-            printf "    run %d: %6.3fs  [%s]\n" "$i" "$t" "$verdict"
+            times+=("$t")
+            printf "    run %d: %6.3fs  [%s]%s\n" "$i" "$t" "$verdict" "$tok_info"
         fi
     done
     rm -f "$tmpfile"
 
-    # average (awk handles float arithmetic)
-    avg=$(printf '%s\n' "${times[@]}" | awk '{s+=$1;c++} END{printf "%.3f",s/c}')
-    if (( errors == RUNS )); then
-        printf "    avg:  %6.3fs  ⚠  all runs returned ERROR\n\n" "$avg"
-    else
-        printf "    avg:  %6.3fs\n\n" "$avg"
+    if [[ ${#times[@]} -eq 0 ]]; then
+        printf "    avg:  —  (no successful runs — all returned non-200 or verdict=ERROR)\n\n"
+        return
     fi
+
+    avg=$(printf '%s\n' "${times[@]}" | awk '{s+=$1;c++} END{printf "%.3f",s/c}')
+    note=""
+    (( bad_runs > 0 )) && note="  ⚠ ${bad_runs} failed run(s) excluded from avg" || true
+    printf "    avg:  %6.3fs%s\n\n" "$avg" "$note"
 }
 
 # ── Pre-flight checks ─────────────────────────────────────────────────────────
 for f in "$SINGLE_IMAGE" "$FRONT_IMAGE" "$BACK_IMAGE"; do
     if [[ ! -f "$f" ]]; then
         echo "ERROR: test image not found: $f" >&2
-        echo "Run this script from the repo root." >&2
         exit 1
     fi
 done
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 echo ""
-echo "Latency benchmark — ${RUNS} runs per scenario"
+echo "Latency benchmark — ${RUNS} timed run(s) per scenario + 1 warm-up"
 echo "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 echo "Models: ${MODELS[*]}"
+[[ -n "$API_KEY" ]] && echo "Auth:   X-API-Key header set" || true
 echo "════════════════════════════════════════════════════════════"
 
 for model in "${MODELS[@]}"; do
