@@ -96,21 +96,39 @@ Synthetic labels are sufficient for demonstrating the architecture, but real lab
 
 ### Available real label pairs
 
+#### Beer
+
 | Product | Front | Back/GWS | Notes |
 |---|---|---|---|
-| Henninger Lager (beer, imported DE) | `henninger-real-front.jpg` | `henninger-real-gws.jpg` | GWS face upside-down in photo; importer info on a separate third face (`henninger-real-back.jpg`) |
-| Stiegl Radler Grapefruit (malt bev., imported AT) | `stiegl-radler-grapefruit-front.jpg` | `stiegl-radler-grapefruit-back.jpg` | Clean two-panel pair; 2.5% ABV; full importer address on back |
+| Henninger Lager (imported DE) | `beer/henninger-real-front.jpg` | `beer/henninger-real-gws.jpg` | GWS face upside-down in photo; importer info on a third face (`henninger-real-back.jpg`) |
+| Stiegl Radler Grapefruit (malt bev., imported AT) | `beer/stiegl-radler-grapefruit-front.jpg` | `beer/stiegl-radler-grapefruit-back.jpg` | 2.5% ABV; full importer address on back |
+| Budweiser (domestic) | `beer/budweiser-real-front.jpg` | `beer/budweiser-real-back.jpg` | GWS on side/back panel |
+| Delirium Tremens bottle (imported BE, 8.5% ABV) | `beer/delirium-tremens-bottle-real-front.jpg` | `beer/delirium-tremens-bottle-real-back.jpg` | BBL Inc, Frederick MD; imported |
+| Delirium Tremens can (imported BE, 8.5% ABV) | `beer/delirium-tremens-can-real-front.jpg` | `beer/delirium-tremens-can-real-gws.jpg` | 3-panel cylinder; also `delirium-tremens-can-real-side.jpg` (ABV + net contents) |
+| Heineken Original (imported NL) | `beer/heineken-original-real-front.jpg` | `beer/heineken-original-real-back.jpg` | Standard two-panel |
+| Sierra Nevada Pale Ale (domestic) | `beer/sierra-nevada-pale-ale-real-front.jpg` | `beer/sierra-nevada-pale-ale-real-back.jpg` | Standard two-panel |
 
-**HEIC rejection test:** `stiegl-radler-grapefruit-front.heic` — submit to verify 415 is returned for iPhone HEIC uploads.
+**HEIC rejection test:** `beer/stiegl-radler-grapefruit-front.heic` — submit to verify 415 is returned for iPhone HEIC uploads.
 
-The smoke test (`scripts/smoke-test.sh`) includes real-label calls for both pairs.
+The smoke test (`scripts/smoke-test.sh`) includes real-label calls for Henninger and Stiegl pairs.
+
+#### Wine
+
+| Product | Front | Back | Notes |
+|---|---|---|---|
+| Auchere Sancerre 2024 (imported FR) | `wine/auchere-sancerre-real-front.jpg` | `wine/auchere-sancerre-real-back.jpg` | Importer: Planet Wine Inc |
+| Baci di Sangiovese 2020, Toscana IGT (imported IT) | `wine/baci-di-sangiovese-real-front.jpg` | `wine/baci-di-sangiovese-real-back.jpg` | Importer: Planet Wine Inc |
+| Brumes de La Tour Blanche 2021 Sauternes (imported FR) | `wine/brumes-tour-blanche-real-front.jpg` | `wine/brumes-tour-blanche-real-back-a.jpg` | 4 shots; `-back-c.jpg` explicitly shows `375 ml` net contents |
+| Loic Bulliat Bibine 2023, Beaujolais-Villages (imported FR) | `wine/bulliat-bibine-real-front.jpg` | `wine/bulliat-bibine-real-back.jpg` | Standard two-panel |
+| The "Ron Ron" Sauvignon 2023, Loire Valley (imported FR) | `wine/ron-ron-sauvignon-real-front.jpg` | `wine/ron-ron-sauvignon-real-back.jpg` | ⚠ GWS header in mixed case — R-GW-03 candidate |
 
 ### To-do before interviewer submission
 
 - [ ] Run Henninger front + GWS smoke test; document result in `docs/project-log.md`
 - [ ] Run Stiegl two-panel smoke test; document result
+- [ ] Run Ron Ron two-panel test; note whether R-GW-03 fires on mixed-case GWS header
+- [ ] Run Delirium Tremens can front + GWS test; document three-panel strategy
 - [ ] Acquire and test a spirits bottle — front + back panels
-- [ ] Acquire and test a wine bottle — front + back panels
 
 ---
 
