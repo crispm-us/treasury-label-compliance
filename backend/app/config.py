@@ -21,14 +21,23 @@ EXTRACTION_MODEL             LiteLLM model string for Layer 1 extraction.
                              Default: anthropic/claude-haiku-4-5-20251001
                              Examples:
                                anthropic/claude-sonnet-4-6
-                               gemini/gemini-1.5-flash
-                               openai/gpt-4o
+                               gemini/gemini-2.5-flash-lite
+                               openai/gpt-5.4-nano
 
 EXTRACTION_FALLBACK_MODELS   Comma-separated ordered list of fallback model strings.
                              Tried in order when the primary model returns a retryable
                              error (anything except 400/401).  Leave empty to disable
                              fallback (default).
-                             Example: gemini/gemini-1.5-flash,openai/gpt-4o
+                             Three-tier default (see ADR-001):
+                               gemini/gemini-2.5-flash-lite,openai/gpt-5.4-nano
+
+MODEL_TIMEOUT_SECONDS        Per-call timeout passed to litellm.completion().
+                             Default: 30.0 seconds.
+                             Note: 4.5 s (original ADR-001 target) is not achievable for
+                             vision calls with two images on Claude Haiku at P90 — observed
+                             latency is 8–9 s. See docs/adr/001-model-selection.md and the
+                             latency analysis in docs/adr/010-audit-logging.md for details.
+                             Recommended minimums: 20 s (Haiku), 12 s (Gemini Flash-Lite).
 
 API keys (read by LiteLLM from the environment automatically)
 --------------
@@ -67,6 +76,8 @@ EXTRACTION_FALLBACK_MODELS: list[str] = [
     for m in os.getenv("EXTRACTION_FALLBACK_MODELS", "").split(",")
     if m.strip()
 ]
+
+MODEL_TIMEOUT_SECONDS: float = float(os.getenv("MODEL_TIMEOUT_SECONDS", "30"))
 
 # ---------------------------------------------------------------------------
 # API authentication (optional — for Railway deployment)

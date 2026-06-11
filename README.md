@@ -158,7 +158,7 @@ All tests mock the extraction layer — no API key or network access required.
 uv run --with pytest pytest tests/ -v
 ```
 
-56 tests covering: verdict paths (compliant, noncompliant, unverifiable, error), all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401/400 no-retry, all-fallbacks-exhausted), non-dict JSON guard, upload size limit (413), magic-byte MIME validation (415), API key auth, token usage fields, partial verification flag, two-panel token summation, readable merge, and empty/whitespace mandatory field bypass. See `tests/test_api.py`, `tests/test_extractor.py`, and `tests/test_compliance_checker.py`.
+61 tests covering: verdict paths (compliant, noncompliant, unverifiable, error), all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401/400 no-retry, all-fallbacks-exhausted), non-dict JSON guard, upload size limit (413), magic-byte MIME validation (415), API key auth, token usage fields, partial verification flag, two-panel token summation, readable merge, empty/whitespace mandatory field bypass, proof mismatch at low confidence (warning), R-WN-08 empty-string appellation bypass, null beverage class (R-META-01), and GWS boolean-true with no extractable text. See `tests/test_api.py`, `tests/test_extractor.py`, and `tests/test_compliance_checker.py`.
 
 ---
 
@@ -170,7 +170,7 @@ See [`.env.example`](.env.example) for all environment variables. Key settings:
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | Required for the default model. Set the appropriate key for your provider. |
 | `EXTRACTION_MODEL` | `anthropic/claude-haiku-4-5-20251001` | LiteLLM model string for Layer 1 extraction (`provider/model-name` format). |
-| `EXTRACTION_FALLBACK_MODELS` | _(empty)_ | Comma-separated list of fallback models tried in order on retryable errors (e.g. `gemini/gemini-1.5-flash,openai/gpt-4o`). |
+| `EXTRACTION_FALLBACK_MODELS` | _(empty)_ | Comma-separated list of fallback models tried in order on retryable errors (e.g. `gemini/gemini-2.5-flash-lite,openai/gpt-5.4-nano`). |
 | `API_KEY` | _(empty)_ | When set, requires `X-API-Key` header on all requests. Use for Railway deployment. |
 | `AUDIT_ENABLED` | `true` | Set to `false` to disable JSONL audit log writes. |
 

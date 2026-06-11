@@ -1,7 +1,8 @@
 # ADR-001: Vision Model Selection, Multi-Provider Strategy, and SLA
 
 Date: 2026-06-09
-Status: Accepted
+Updated: 2026-06-10
+Status: Accepted (SLA target revised — see §Latency note below)
 
 ## Context
 
@@ -65,9 +66,28 @@ Expected distribution under normal operation: ~95% primary (Gemini Flash), ~4% F
 
 - All three Anthropic, Google, and OpenAI API keys must be present as environment secrets in Railway
 - If a provider has a sustained outage, the next tier absorbs the traffic automatically — no operator intervention needed
-- The `timeout` value is a tunable env var (`MODEL_TIMEOUT_SECONDS`, default `4.5`) — adjustable if a provider is consistently slow
+- The `timeout` value is a tunable env var (`MODEL_TIMEOUT_SECONDS`, default `30.0`) — see §Latency note for rationale
 - Prompts must be model-agnostic; no provider-specific features used
 - Response parsing must handle minor output format variation (mitigated by requiring strict JSON output in the prompt)
+
+## Latency note (updated 2026-06-10)
+
+The 4.5 s timeout target and "1–3 seconds" estimate in this ADR reflect text-only benchmarks. Vision calls with two label images are materially slower.
+
+Observed (two-image submissions in testing): 5–9 s on Haiku; 3–5 s on Gemini Flash-Lite. The P90 for a Haiku two-image call is 7–9 s. The 4.5 s target is **not achievable** as a default for two-image Haiku calls.
+
+**Root causes:** vision encoder overhead (~400–600 ms per image), image token count (~1,280 tokens per 1MP JPEG filling ~30% of the prefill budget), and JSON output token overhead (~60–80 extra tokens for the 18-field schema. TTFT for Haiku is ~0.87 s; decode 150 output tokens at ~89 t/s adds ~1.7 s; total including vision encoder is 4–9 s.
+
+**Revised guidance:**
+- `MODEL_TIMEOUT_SECONDS` default is now **30 s** (safe P99 guard for two-image Haiku)
+- Recommended minimums: 20 s (Haiku), 12 s (Gemini Flash-Lite)
+- The 4.5 s target is achievable only with a single image, Gemini Flash-Lite, warm prompt cache, and pre-resized images — not as a general default
+
+**Optimizations available (not implemented):** resize to ≤1568px before submission (reduces token count and prefill time), enable LiteLLM prompt caching for the system prompt (saves ~500 ms on cache hit), disable `LITELLM_LOG=DEBUG` in production (adds measurable overhead).
+
+The stakeholder's "5 seconds" intuition (Sarah Chen) aligns with single-image text-heavy labels. Two-image compliance checks require a wider default window. The `MODEL_TIMEOUT_SECONDS` env var allows operators to tighten the budget if their workload and provider mix support it.
+
+---
 
 ## Alternatives Considered
 

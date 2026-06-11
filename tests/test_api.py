@@ -78,8 +78,11 @@ def test_response_has_all_required_fields(client):
     assert r.status_code == 200
     body = r.json()
     for f in ("request_id", "timestamp", "verdict", "beverage_class",
-              "issues", "extraction_model", "audit_logged", "partial_verification"):
+              "issues", "extraction_model", "audit_logged", "partial_verification",
+              "input_tokens", "output_tokens"):
         assert f in body, f"response missing field: {f!r}"
+    assert body["input_tokens"] == 100
+    assert body["output_tokens"] == 50
 
 
 def test_issue_shape(client):
@@ -132,7 +135,9 @@ def test_spirits_compliant(client):
             "/v1/check",
             files={"front": ("front.jpg", _JPEG, "image/jpeg")},
         )
-    assert r.json()["verdict"] == "COMPLIANT"
+    body = r.json()
+    assert body["verdict"] == "COMPLIANT"
+    assert body["issues"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -232,7 +237,12 @@ def test_model_auth_error_returns_error(client):
             "/v1/check",
             files={"front": ("front.jpg", _JPEG, "image/jpeg")},
         )
-    assert r.json()["verdict"] == "ERROR"
+    body = r.json()
+    assert r.status_code == 200
+    assert body["verdict"] == "ERROR"
+    assert body["issues"] == []
+    assert body["beverage_class"] is None
+    assert body["partial_verification"] is False
 
 
 # ---------------------------------------------------------------------------

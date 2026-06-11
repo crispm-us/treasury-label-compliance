@@ -320,3 +320,100 @@ def test_wine_low_confidence_abv_out_of_range():
     warning_rules = {i.rule_id for i in r.warnings}
     assert "R-WN-03" in warning_rules, "Low-confidence out-of-range wine ABV must fire R-WN-03 as warning"
     assert "R-WN-03" not in {i.rule_id for i in r.errors}
+
+
+# ---------------------------------------------------------------------------
+# P2 gap coverage (identified in second Cursor audit, 2026-06-10)
+# ---------------------------------------------------------------------------
+
+def test_null_beverage_class_r_meta_01():
+    """
+    beverage_class=null → R-META-01 warning; no class-specific rules applied.
+    Verdict: UNVERIFIABLE (GWS rules still run; if GWS present and correct, only
+    the R-META-01 warning fires).
+    """
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["beverage_class"] = None
+    r = check_compliance(ExtractionResult.from_dict(data))
+    warning_rules = {i.rule_id for i in r.warnings}
+    assert "R-META-01" in warning_rules, "Null beverage_class must fire R-META-01 warning"
+    assert r.verdict == "UNVERIFIABLE"
+
+
+def test_gws_body_high_confidence_wrong_text_is_error():
+    """
+    R-GW-02 at high confidence with wrong body text must fire as error → NONCOMPLIANT.
+    Regression: a previous fixture only tested the low-confidence (warning) path.
+    """
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["gws_body"] = {
+        "value": "(1) According to the Surgeon General, drinking is fine. (2) No problems.",
+        "confidence": "high",
+    }
+    r = check_compliance(ExtractionResult.from_dict(data))
+    assert r.verdict == "NONCOMPLIANT", (
+        "High-confidence wrong GWS body text must produce NONCOMPLIANT"
+    )
+    error_rules = {i.rule_id for i in r.errors}
+    assert "R-GW-02" in error_rules
+
+
+def test_wine_vintage_empty_appellation_r_wn_08():
+    """
+    Vintage stated but appellation is an empty string (not None, not not_found).
+    R-WN-08 must fire — empty string is treated as absent.
+    """
+    data = json.loads((FIXTURES / "wine_compliant.json").read_text())
+    data["fields"]["appellation"] = {"value": "", "confidence": "high"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    warning_rules = {i.rule_id for i in r.warnings}
+    assert "R-WN-08" in warning_rules, (
+        "Empty-string appellation with a stated vintage must fire R-WN-08 warning"
+    )
+
+
+def test_spirits_low_confidence_proof_mismatch_is_warning():
+    """
+    Proof mismatch at low confidence must produce a warning, not an error.
+    A blurry proof reading should not force NONCOMPLIANT.
+    """
+    data = json.loads((FIXTURES / "spirits_compliant.json").read_text())
+    # Set ABV to 40% (compliant) and proof to 94 (mismatch: expected 80.0)
+    # at low confidence — should be a warning, not an error
+    data["fields"]["abv_pct"] = {"value": 40.0, "confidence": "high"}
+    data["fields"]["proof"]   = {"value": 94.0, "confidence": "low"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    warning_rules = {i.rule_id for i in r.warnings}
+    assert "R-DS-03" in warning_rules, (
+        "Low-confidence proof mismatch must fire R-DS-03 as warning"
+    )
+    assert "R-DS-03" not in {i.rule_id for i in r.errors}, (
+        "Low-confidence proof mismatch must NOT be an error"
+    )
+
+
+def test_gws_present_true_no_text_r_gw_01_warning():
+    """
+    gws_present=true (high confidence) but both gws_header and gws_body are not_found.
+    The boolean is unverifiable without supporting text evidence.
+    Expected: R-GW-01 not_found warning → UNVERIFIABLE.
+
+    Design rationale: a boolean True with zero extractable text is the same
+    evidentiary state as not_found. Emitting R-GW-01 explicitly is preferable
+    to silently falling through to R-GW-02/03 not_found warnings (which would
+    produce three separate warnings for one 'GWS unreadable' condition).
+    See compliance_checker.py _check_gws for the documented alternative.
+    """
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["gws_present"] = {"value": True,  "confidence": "high"}
+    data["fields"]["gws_header"]  = {"value": None,  "confidence": "not_found"}
+    data["fields"]["gws_body"]    = {"value": None,  "confidence": "not_found"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    warning_rules = {i.rule_id for i in r.warnings}
+    assert "R-GW-01" in warning_rules, (
+        "gws_present=true with no extractable text must fire R-GW-01 not_found warning"
+    )
+    assert r.verdict == "UNVERIFIABLE"
+    # Must NOT also produce R-GW-02/03 (we return early after the R-GW-01 warning)
+    assert "R-GW-02" not in warning_rules
+    assert "R-GW-03" not in warning_rules

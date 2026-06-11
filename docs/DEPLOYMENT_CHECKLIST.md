@@ -55,13 +55,13 @@ curl https://<URL>/healthz
 # Beer label — expect COMPLIANT or NONCOMPLIANT (not ERROR)
 curl -X POST https://<URL>/v1/check \
   -H "X-API-Key: <KEY>" \
-  -F "front=@tests/images/beer_sunset_ale_front.png"
+  -F "front=@test-labels/beer/prairie-creek-lager-front.jpg"
 
 # Two-panel spirits — expect COMPLIANT
 curl -X POST https://<URL>/v1/check \
   -H "X-API-Key: <KEY>" \
-  -F "front=@tests/images/spirits_front.png" \
-  -F "back=@tests/images/spirits_back.png"
+  -F "front=@test-labels/spirits/blue-ridge-rye-front.jpg" \
+  -F "back=@test-labels/spirits/blue-ridge-rye-back.jpg"
 ```
 
 ---

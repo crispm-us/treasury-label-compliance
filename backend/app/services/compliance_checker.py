@@ -196,7 +196,29 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
     if gws_text_present:
         gws_effectively_present: bool | None = True
     elif f.gws_present.value is True:
-        gws_effectively_present = True
+        # Boolean claims present but no header or body text could be extracted.
+        #
+        # Design choice: emit R-GW-01 as a not_found warning and return early.
+        # The GWS cannot be verified from available evidence — an unverifiable boolean
+        # True is the same evidentiary state as not_found, and surfacing it explicitly
+        # gives callers a clear signal to request a clearer image.
+        #
+        # Alternative considered and rejected: trust the boolean, skip R-GW-01,
+        # and fall through to R-GW-02/03 (which would both fire as not_found warnings).
+        # Rejected because three separate warnings for what is essentially one
+        # "GWS text unreadable" condition is confusing; a single R-GW-01 not_found
+        # warning at the right level of abstraction communicates the same information.
+        issues.append(Issue(
+            rule_id="R-GW-01", severity="warning",
+            field="gws_present", found=True,
+            expected=(
+                "GWS boolean indicates present but no header or body text could be extracted — "
+                "cannot verify content. Submit a clearer image of the Government Warning "
+                "Statement (27 CFR §16.21)"
+            ),
+            not_found=True,
+        ))
+        return  # Cannot verify R-GW-02/03 without text
     elif f.gws_present.value is False:
         gws_effectively_present = False
     else:
@@ -345,6 +367,8 @@ def _check_spirits(f: ExtractionFields, issues: list[Issue]) -> None:
             ))
 
     # R-DS-03 proof consistency: proof must equal 2 × ABV (tolerance ±0.3 proof)
+    # Severity follows proof confidence: a blurry proof reading at low confidence
+    # should not force NONCOMPLIANT on an otherwise clean label.
     if (abv_present
             and f.proof.confidence != "not_found"
             and f.proof.value is not None
@@ -352,13 +376,16 @@ def _check_spirits(f: ExtractionFields, issues: list[Issue]) -> None:
         try:
             proof    = float(f.proof.value)
             abv      = float(f.abv_pct.value)
-            expected = round(abv * 2, 1)
-            if abs(proof - expected) > 0.3:
+            expected_proof = round(abv * 2, 1)
+            if abs(proof - expected_proof) > 0.3:
+                sev_proof: Literal["error", "warning"] = (
+                    "error" if f.proof.confidence == "high" else "warning"
+                )
                 issues.append(Issue(
-                    rule_id="R-DS-03", severity="error",
+                    rule_id="R-DS-03", severity=sev_proof,
                     field="proof", found=proof,
                     expected=(
-                        f"Proof must equal 2 × ABV; expected {expected} proof "
+                        f"Proof must equal 2 × ABV; expected {expected_proof} proof "
                         f"for {abv}% ABV (27 CFR §5.35)"
                     ),
                 ))
@@ -411,11 +438,19 @@ def _check_wine(f: ExtractionFields, issues: list[Issue]) -> None:
         ))
 
     # R-WN-08: vintage requires appellation
+    # Use the same empty/whitespace guard as _check_mandatory — a model that
+    # returns {"value": "", "confidence": "high"} for appellation while a vintage
+    # is stated should still fire this rule.
     if f.vintage.confidence != "not_found" and f.vintage.value is not None:
-        if f.appellation.confidence == "not_found" or f.appellation.value is None:
+        appellation_absent = (
+            f.appellation.confidence == "not_found"
+            or f.appellation.value is None
+            or (isinstance(f.appellation.value, str) and not f.appellation.value.strip())
+        )
+        if appellation_absent:
             issues.append(Issue(
                 rule_id="R-WN-08", severity="warning",
-                field="appellation", found=None,
+                field="appellation", found=f.appellation.value,
                 expected=(
                     "Vintage date detected but appellation of origin not visible — "
                     "appellation required when vintage is stated (27 CFR §4.27)"

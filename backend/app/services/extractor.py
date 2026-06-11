@@ -38,7 +38,7 @@ from typing import Any
 
 import litellm
 
-from backend.app.config import EXTRACTION_FALLBACK_MODELS, EXTRACTION_MODEL
+from backend.app.config import EXTRACTION_FALLBACK_MODELS, EXTRACTION_MODEL, MODEL_TIMEOUT_SECONDS
 from backend.app.services.compliance_checker import ExtractionResult
 
 # Suppress LiteLLM's verbose success logging; keep errors.
@@ -230,6 +230,7 @@ def _extract_single(
         response = litellm.completion(
             model=model,
             max_tokens=2048,
+            timeout=MODEL_TIMEOUT_SECONDS,
             messages=[
                 {"role": "system", "content": _SYSTEM},
                 {
@@ -285,16 +286,19 @@ def _extract_single(
         parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
         snippet = raw[:400].replace("\n", " ")
+        # Return the real token counts: the API call succeeded and those tokens
+        # were billed even though the response is unparseable.
         return None, ExtractionError(
             status_code=None,
             message=f"JSON parse error: {exc} — raw response begins: {snippet}",
-        ), 0, 0
+        ), input_tokens, output_tokens
 
     if not isinstance(parsed, dict):
+        # Same rationale: tokens were consumed; preserve them in the audit record.
         return None, ExtractionError(
             status_code=None,
             message=f"Model returned non-object JSON ({type(parsed).__name__}): {raw[:200]}",
-        ), 0, 0
+        ), input_tokens, output_tokens
 
     # Validate confidence enum values and the not_found→null invariant for all fields.
     # Invalid confidence strings currently rank as 0 in _CONF_RANK (silently treated
@@ -312,7 +316,7 @@ def _extract_single(
                         f"Field '{_fname}' has invalid confidence {_conf!r} — "
                         f"must be one of {sorted(_VALID_CONF)}"
                     ),
-                ), 0, 0
+                ), input_tokens, output_tokens
             if _conf == "not_found" and _fobj.get("value") is not None:
                 return None, ExtractionError(
                     status_code=None,
@@ -320,7 +324,7 @@ def _extract_single(
                         f"Field '{_fname}' has confidence 'not_found' but non-null value "
                         f"{_fobj['value']!r} — 'not_found' requires value: null"
                     ),
-                ), 0, 0
+                ), input_tokens, output_tokens
 
     return parsed, None, input_tokens, output_tokens
 
