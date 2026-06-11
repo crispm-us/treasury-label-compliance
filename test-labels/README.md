@@ -118,9 +118,11 @@ For multi-panel submission guidance and expected verdicts, see [`docs/DEPLOYMENT
 
 | Product | Front | Back | Notes |
 |---|---|---|---|
-| Jack Daniel's Old No. 7 (domestic TN) | `spirits/jack-daniels-old-no-7-front.jpg` | `spirits/jack-daniels-old-no-7-back.jpg` | 200 ml miniature (front) / 750 ml (back) — two different bottle sizes photographed; no GWS visible on either panel |
-| Glenfiddich 12 Year Old (imported UK/Scotch) | `spirits/glenfiddich-12-front.jpg` | `spirits/glenfiddich-12-back.jpg` | |
-| Glenlivet 12 Year Old (imported UK/Scotch) | `spirits/glenlivet-12-front.jpg` | `spirits/glenlivet-12-back.jpg` | |
+| Tito's Handmade Vodka (domestic TX, 1L) | `spirits/titos-vodka-front.jpg` | `spirits/titos-vodka-back.jpg` | GWS present on back label ✓; 80 Proof / 40% ABV; Distilled from corn |
+| Jack Daniel's Old No. 7 — **EU market, 70cl** *(front only — no back)* | `spirits/jack-daniels-old-no-7-eu-front.jpg` | — | ⚠ **Non-US label**: "70cl 40% Vol." format; no GWS (GWS is a US-only requirement); use to verify the checker returns NONCOMPLIANT on a European-market label without crashing |
+| Jack Daniel's Old No. 7 (domestic TN) | `spirits/jack-daniels-old-no-7-front.jpg` | `spirits/jack-daniels-old-no-7-back.jpg` | 200 ml miniature (front) / 750 ml (back) — different sizes photographed; no GWS visible on either panel |
+| Glenfiddich 12 Year Old Single Malt Scotch Whisky (imported, 750ml) | `spirits/glenfiddich-12-front.jpg` | `spirits/glenfiddich-12-back.jpg` | GWS present on back ✓ — rotated 90°, model handles orientation; imported by William Grant & Sons, Inc. |
+| The Glenlivet 12 Years of Age Single Malt Scotch Whisky (imported, 750ml) | `spirits/glenlivet-12-front.jpg` | `spirits/glenlivet-12-back.jpg` | GWS present on back ✓ — rotated 90°; front shows 40% ABV + 80 Proof — R-DS-03 proof/ABV consistency check; imported by The Glenlivet Distilling Company, NY |
 
 ### Beer
 
@@ -131,8 +133,9 @@ For multi-panel submission guidance and expected verdicts, see [`docs/DEPLOYMENT
 | Budweiser (domestic) | `beer/budweiser-front.jpg` | `beer/budweiser-back.jpg` | GWS runs vertically on side/back panel |
 | Delirium Tremens bottle (imported BE, 8.5% ABV) | `beer/delirium-tremens-bottle-front.jpg` | `beer/delirium-tremens-bottle-back.jpg` | Importer: BBL Inc, Frederick MD |
 | Delirium Tremens can (imported BE, 8.5% ABV) | `beer/delirium-tremens-can-front.jpg` | `beer/delirium-tremens-can-gws.jpg` | 3-panel cylinder; `delirium-tremens-can-side.jpg` has ABV + net contents |
-| Heineken Original (imported NL) | `beer/heineken-original-front.jpg` | `beer/heineken-original-back.jpg` | Clean two-panel |
-| Sierra Nevada Pale Ale (domestic) | `beer/sierra-nevada-pale-ale-front.jpg` | `beer/sierra-nevada-pale-ale-back.jpg` | Clean two-panel |
+| Heineken Original (imported NL) | `beer/heineken-original-front.jpg` | `beer/heineken-original-back.jpg` | Standard two-panel |
+| Sierra Nevada Pale Ale (domestic) | `beer/sierra-nevada-pale-ale-front.jpg` | `beer/sierra-nevada-pale-ale-back.jpg` | Standard two-panel |
+| Mike's Harder Lemonade — Deadpool 2 Ltd. Ed. (domestic) | `beer/mikes-harder-lemonade-front.jpg` | `beer/mikes-harder-lemonade-back.jpg` | Flavored malt beverage; 8% ABV; GWS runs vertically on back panel; Mike's Hard Lemonade Co., La Crosse WI |
 
 ### Wine
 
@@ -143,3 +146,4 @@ For multi-panel submission guidance and expected verdicts, see [`docs/DEPLOYMENT
 | Brumes de La Tour Blanche 2021 Sauternes (imported FR) | `wine/brumes-tour-blanche-front.jpg` | `wine/brumes-tour-blanche-back-a.jpg` | 4 shots total; `-back-c.jpg` shows `375 ml` net contents explicitly |
 | Loic Bulliat Bibine 2023, Beaujolais-Villages (imported FR) | `wine/bulliat-bibine-front.jpg` | `wine/bulliat-bibine-back.jpg` | Clean two-panel |
 | The "Ron Ron" Sauvignon 2023, Loire Valley (imported FR) | `wine/ron-ron-sauvignon-front.jpg` | `wine/ron-ron-sauvignon-back.jpg` | ⚠ GWS header in mixed case — R-GW-03 candidate |
+| Angry Orchard Iceman Hard Cider (domestic, 10% ABV) | `wine/angry-orchard-iceman-front.jpg` | `wine/angry-orchard-iceman-back.jpg` | Wine category (apple juice concentrate); CONTAINS SULFITES on label; GWS present on back ✓ — good R-WN-09 exercise |

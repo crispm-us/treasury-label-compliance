@@ -218,17 +218,51 @@ check "Jack Daniel's Old No. 7 real front+back → 200 (NONCOMPLIANT expected �
     -F "front=@test-labels/spirits/jack-daniels-old-no-7-front.jpg" \
     -F "back=@test-labels/spirits/jack-daniels-old-no-7-back.jpg"
 
-check "Glenfiddich 12 real front+back → 200 (Scotch import; verdict unverified)" \
+check "Glenfiddich 12 real front+back → 200 (GWS on back rotated 90° — expect COMPLIANT or UNVERIFIABLE)" \
     200 - \
     -X POST "${BASE_URL}/v1/check" \
     -F "front=@test-labels/spirits/glenfiddich-12-front.jpg" \
     -F "back=@test-labels/spirits/glenfiddich-12-back.jpg"
 
-check "Glenlivet 12 real front+back → 200 (Scotch import; verdict unverified)" \
+# Glenlivet: front label shows both 40% ABV and 80 Proof — exercises R-DS-03 proof/ABV consistency.
+check "Glenlivet 12 real front+back → 200 (GWS on back rotated 90°; proof+ABV on front — R-DS-03 exercise)" \
     200 - \
     -X POST "${BASE_URL}/v1/check" \
     -F "front=@test-labels/spirits/glenlivet-12-front.jpg" \
     -F "back=@test-labels/spirits/glenlivet-12-back.jpg"
+
+# Non-US label: EU-market Jack Daniel's 70cl. No GWS on European labels — checker must return
+# NONCOMPLIANT without crashing on non-standard net contents format ("70cl") or ABV format ("40% Vol.").
+check "JD Old No. 7 EU 70cl front only → 200 NONCOMPLIANT (non-US label; no GWS)" \
+    200 NONCOMPLIANT \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/spirits/jack-daniels-old-no-7-eu-front.jpg"
+
+# Tito's: GWS on back label — front-only NONCOMPLIANT, front+back should resolve.
+check "Tito's Vodka real front only → 200 (NONCOMPLIANT expected — GWS on back)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/spirits/titos-vodka-front.jpg"
+
+check "Tito's Vodka real front+back → 200 (COMPLIANT or UNVERIFIABLE expected)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/spirits/titos-vodka-front.jpg" \
+    -F "back=@test-labels/spirits/titos-vodka-back.jpg"
+
+# Angry Orchard Iceman: wine-category (apple juice), CONTAINS SULFITES on label.
+check "Angry Orchard Iceman real front+back → 200 (wine category; R-WN-09 exercise)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/wine/angry-orchard-iceman-front.jpg" \
+    -F "back=@test-labels/wine/angry-orchard-iceman-back.jpg"
+
+# Mike's Harder Lemonade: flavored malt beverage, GWS vertical on back.
+check "Mike's Harder Lemonade real front+back → 200 (flavored malt beverage)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/beer/mikes-harder-lemonade-front.jpg" \
+    -F "back=@test-labels/beer/mikes-harder-lemonade-back.jpg"
 
 if [[ -n "$API_KEY" ]]; then
     # Send no key intentionally — expects 401

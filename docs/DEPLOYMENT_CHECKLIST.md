@@ -100,9 +100,11 @@ Synthetic labels are sufficient for demonstrating the architecture, but real lab
 
 | Product | Front | Back | Notes |
 |---|---|---|---|
+| Tito's Handmade Vodka (domestic TX, 1L) | `spirits/titos-vodka-front.jpg` | `spirits/titos-vodka-back.jpg` | GWS present on back ✓; 80 Proof / 40% ABV; Distilled from corn |
+| Jack Daniel's Old No. 7 — **EU market 70cl** *(front only)* | `spirits/jack-daniels-old-no-7-eu-front.jpg` | — | ⚠ Non-US label: "70cl 40% Vol." format, no GWS; standalone front-only test — verifies checker handles European labels gracefully |
 | Jack Daniel's Old No. 7 (domestic TN) | `spirits/jack-daniels-old-no-7-front.jpg` | `spirits/jack-daniels-old-no-7-back.jpg` | 200 ml miniature (front) / 750 ml (back) — different sizes photographed; no GWS visible on either panel |
-| Glenfiddich 12 Year Old (imported UK/Scotch) | `spirits/glenfiddich-12-front.jpg` | `spirits/glenfiddich-12-back.jpg` | |
-| Glenlivet 12 Year Old (imported UK/Scotch) | `spirits/glenlivet-12-front.jpg` | `spirits/glenlivet-12-back.jpg` | |
+| Glenfiddich 12 Year Old (imported Scotch, 750ml) | `spirits/glenfiddich-12-front.jpg` | `spirits/glenfiddich-12-back.jpg` | GWS present on back ✓ — rotated 90°; imported by William Grant & Sons, Inc. |
+| The Glenlivet 12 Years of Age (imported Scotch, 750ml) | `spirits/glenlivet-12-front.jpg` | `spirits/glenlivet-12-back.jpg` | GWS present on back ✓ — rotated 90°; front shows 40% ABV + 80 Proof; imported by The Glenlivet Distilling Company, NY |
 
 #### Beer
 
@@ -115,6 +117,7 @@ Synthetic labels are sufficient for demonstrating the architecture, but real lab
 | Delirium Tremens can (imported BE, 8.5% ABV) | `beer/delirium-tremens-can-front.jpg` | `beer/delirium-tremens-can-gws.jpg` | 3-panel cylinder; also `delirium-tremens-can-side.jpg` (ABV + net contents) |
 | Heineken Original (imported NL) | `beer/heineken-original-front.jpg` | `beer/heineken-original-back.jpg` | Standard two-panel |
 | Sierra Nevada Pale Ale (domestic) | `beer/sierra-nevada-pale-ale-front.jpg` | `beer/sierra-nevada-pale-ale-back.jpg` | Standard two-panel |
+| Mike's Harder Lemonade — Deadpool 2 Ltd. Ed. (domestic) | `beer/mikes-harder-lemonade-front.jpg` | `beer/mikes-harder-lemonade-back.jpg` | Flavored malt beverage; 8% ABV; GWS vertical on back |
 
 **HEIC rejection test:** `beer/stiegl-radler-grapefruit-front.heic` — submit to verify 415 is returned for iPhone HEIC uploads.
 
@@ -129,6 +132,7 @@ The smoke test (`scripts/smoke-test.sh`) includes real-label calls for Henninger
 | Brumes de La Tour Blanche 2021 Sauternes (imported FR) | `wine/brumes-tour-blanche-front.jpg` | `wine/brumes-tour-blanche-back-a.jpg` | 4 shots; `-back-c.jpg` explicitly shows `375 ml` net contents |
 | Loic Bulliat Bibine 2023, Beaujolais-Villages (imported FR) | `wine/bulliat-bibine-front.jpg` | `wine/bulliat-bibine-back.jpg` | Standard two-panel |
 | The "Ron Ron" Sauvignon 2023, Loire Valley (imported FR) | `wine/ron-ron-sauvignon-front.jpg` | `wine/ron-ron-sauvignon-back.jpg` | ⚠ GWS header in mixed case — R-GW-03 candidate |
+| Angry Orchard Iceman Hard Cider (domestic, 10% ABV) | `wine/angry-orchard-iceman-front.jpg` | `wine/angry-orchard-iceman-back.jpg` | Wine category (apple juice concentrate); CONTAINS SULFITES on label; GWS present on back ✓ |
 
 ### Multi-panel test matrix
 
@@ -136,9 +140,11 @@ For each product below, the "front-only" submission is the **failure case** — 
 
 | Product | Front-only expected | Front+back expected | Notes |
 |---|---|---|---|
+| Tito's Vodka | NONCOMPLIANT (GWS on back panel) | unverified* | GWS confirmed on back label |
+| JD Old No. 7 EU 70cl | **NONCOMPLIANT** (no GWS — European label) | — (front only; no back) | Non-US label; no GWS required in EU |
 | Jack Daniel's Old No. 7 | NONCOMPLIANT (GWS not on front panel) | NONCOMPLIANT (GWS absent both panels) | ⚠ No GWS visible in either photo — may require a third shot |
-| Glenfiddich 12 | NONCOMPLIANT (GWS not on front panel) | unverified* | Scotch import; GWS placement unknown |
-| Glenlivet 12 | NONCOMPLIANT (GWS not on front panel) | unverified* | Scotch import; GWS placement unknown |
+| Glenfiddich 12 | NONCOMPLIANT (GWS not on front panel) | unverified* | GWS on back ✓ (rotated 90°) — expect COMPLIANT or UNVERIFIABLE |
+| Glenlivet 12 | NONCOMPLIANT (GWS not on front panel) | unverified* | GWS on back ✓ (rotated 90°); proof+ABV both present — expect COMPLIANT or UNVERIFIABLE |
 | Henninger Lager | UNVERIFIABLE (GWS on separate GWS face) | — (use front + gws face) | ✓ smoke tested |
 | Stiegl Radler | NONCOMPLIANT (GWS absent front) | UNVERIFIABLE (ABV absent on both panels) | ✓ smoke tested |
 | Budweiser | NONCOMPLIANT (GWS absent front) | unverified* | GWS on side/back panel |
@@ -151,6 +157,8 @@ For each product below, the "front-only" submission is the **failure case** — 
 | Brumes Tour Blanche | NONCOMPLIANT (GWS absent front) | unverified* | Use front + back-a; back-c confirms 375 ml |
 | Bulliat Bibine | NONCOMPLIANT (GWS absent front) | unverified* | |
 | Ron Ron Sauvignon | NONCOMPLIANT (GWS absent front) | **NONCOMPLIANT** (R-GW-03: mixed-case header) | ✓ front+back smoke tested; GWS header reads "Government Warning:" not all-caps |
+| Angry Orchard Iceman | NONCOMPLIANT (GWS absent front) | unverified* | Wine category; CONTAINS SULFITES present — R-WN-09 exercise |
+| Mike's Harder Lemonade | NONCOMPLIANT (GWS absent front) | unverified* | Flavored malt beverage; GWS vertical on back |
 
 `unverified*` — run `bash scripts/smoke-test.sh` with a live model to confirm; then update this table.
 
