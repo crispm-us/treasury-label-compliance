@@ -29,7 +29,7 @@ BACK_SUFFIXES    = ("-back.jpg",  "-back.jpeg",  "-back.png",  "-back.webp")
 
 MAX_HEIGHT  = 1800   # cap combined image height; width scales proportionally
 JPEG_QUALITY = 85
-GAP_PX       = 32    # grey gap between front and back panels
+GAP_PX       = 32    # gray gap between front and back panels
 GAP_COLOR    = (160, 160, 160)
 
 

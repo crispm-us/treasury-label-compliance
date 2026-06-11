@@ -2,7 +2,7 @@
 Audit log writer.
 
 Appends one JSONL entry per compliance check to audit_logs/YYYY-MM-DD.jsonl.
-The audit file is the primary observability artefact for the prototype — it
+The audit file is the primary observability artifact for the prototype — it
 captures every extraction result, verdict, and any model-API failures.
 
 Controlled by AUDIT_ENABLED (see config.py).  Set to false during unit tests

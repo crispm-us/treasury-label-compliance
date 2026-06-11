@@ -5,7 +5,7 @@ Download example alcohol label images into test-labels/.
 Usage (from repo root):
     uv run --with requests --with pillow scripts/download-test-labels.py
 
-Behaviour:
+Behavior:
   - Beer and wine are sourced from Open Food Facts via category search (no
     barcodes required). Products with both front and back images are preferred.
   - Spirits are sourced from Wikimedia Commons category search.
@@ -16,7 +16,7 @@ Behaviour:
   - Exits non-zero if any category is below MIN_PRODUCTS_PER_CATEGORY.
 
 Sources:
-  - Open Food Facts  https://world.openfoodfacts.org  (ODbL licence)
+  - Open Food Facts  https://world.openfoodfacts.org  (ODbL license)
   - Wikimedia Commons  https://commons.wikimedia.org  (CC / public domain)
 """
 
@@ -152,7 +152,7 @@ def off_search_category(
     """
     Return OFF products in category_tag that have at least a front image,
     sorted by popularity (most-photographed first).
-    Filters to the specified country to favour US products with English labels.
+    Filters to the specified country to favor US products with English labels.
     """
     params = {
         "categories_tags_en": category_tag,

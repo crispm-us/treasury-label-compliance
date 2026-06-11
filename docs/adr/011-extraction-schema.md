@@ -8,7 +8,7 @@
 
 ## Context
 
-ADR-009 sketched an extraction schema for Layer 1 (the AI vision model). After writing the Layer 2 compliance checker and all fixture JSON files, the schema is now concrete enough to formalise. This ADR is the normative definition; compliance_checker.py and all fixtures conform to it.
+ADR-009 sketched an extraction schema for Layer 1 (the AI vision model). After writing the Layer 2 compliance checker and all fixture JSON files, the schema is now concrete enough to formalize. This ADR is the normative definition; compliance_checker.py and all fixtures conform to it.
 
 ---
 
@@ -47,7 +47,7 @@ Three values only:
 | `"low"` | Model found something but is uncertain — text may be partially obscured, font is unusual, or the reading is ambiguous. |
 | `"not_found"` | Field was not present in the submitted image. It may exist on a panel that was not submitted. `value` must be `null` when confidence is `"not_found"`. |
 
-**`"not_found"` is not a quality judgement** — it means "not visible here, may be elsewhere." The checker treats `not_found` as a warning (field may exist on another panel), never as a confirmed violation.
+**`"not_found"` is not a quality judgment** — it means "not visible here, may be elsewhere." The checker treats `not_found` as a warning (field may exist on another panel), never as a confirmed violation.
 
 ### Field Reference
 
@@ -158,7 +158,7 @@ Three alternatives were considered and rejected:
 
 ---
 
-## Checker Behaviour for Deferred / Always-Warning Rules
+## Checker Behavior for Deferred / Always-Warning Rules
 
 Three rules have special handling in v1:
 
@@ -174,7 +174,7 @@ Three rules have special handling in v1:
 
 When some fields have `confidence == "not_found"` (generating warnings) and at least one field has a definitive error-severity violation, the checker returns `NONCOMPLIANT` and includes both the error and the warnings in the `issues` list.
 
-**This is a known limitation.** The NONCOMPLIANT verdict is technically correct — the violation exists. However, a submitter who fixes only the reported violation may not realise the label could not be fully verified, because mandatory fields on an unsubmitted panel are flagged only as warnings.
+**This is a known limitation.** The NONCOMPLIANT verdict is technically correct — the violation exists. However, a submitter who fixes only the reported violation may not realize the label could not be fully verified, because mandatory fields on an unsubmitted panel are flagged only as warnings.
 
 **Implemented:** the API response includes a top-level `partial_verification: true` flag whenever `NONCOMPLIANT` co-exists with one or more issues where `not_found=True`, so callers can surface: "Violation found AND some fields could not be verified — submit a complete label image to confirm all mandatory fields."
 
@@ -232,7 +232,7 @@ The `schema_violations` count in the API response and audit log is a model quali
 
 ## Relationship to Other ADRs
 
-- **ADR-009** — defines the two-layer architecture; this ADR formalises the contract between Layer 1 and Layer 2.
+- **ADR-009** — defines the two-layer architecture; this ADR formalizes the contract between Layer 1 and Layer 2.
 - **ADR-008** — covers image preprocessing and the retry/escalation strategy that feeds into Layer 1.
 - **ADR-010** — covers audit logging; `partial_verification` flag is documented there.
 

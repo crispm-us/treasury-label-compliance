@@ -47,7 +47,7 @@ LABELS_DIR = REPO_ROOT / "test-labels"
 # Sized to approximate a typical bottle label at 150 DPI:
 #   front: ~3" wide × 4.5" tall  → 450 × 675 px  (scaled ×2 → 900 × 1350)
 #   back:  ~3" wide × 3.5" tall  → 450 × 525 px  (scaled ×2 → 900 × 1050)
-# We normalise both panels to the same height before stitching.
+# We normalize both panels to the same height before stitching.
 W      = 900
 H      = 1200   # same height for both panels so stitch is flush
 GAP    = 40
@@ -404,7 +404,7 @@ def make_spirits_compliant_front() -> Image.Image:
     img  = Image.new("RGB", (W, H), (18, 42, 26))       # dark forest green
     draw = ImageDraw.Draw(img)
 
-    # silver/grey border
+    # silver/gray border
     draw.rectangle([8, 8, W - 9, H - 9],   outline=(190, 200, 195), width=4)
     draw.rectangle([16, 16, W - 17, H - 17], outline=(140, 155, 148), width=1)
 
