@@ -60,7 +60,7 @@ app = FastAPI(
 # Upload validation
 # ---------------------------------------------------------------------------
 
-ALLOWED_MEDIA_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_MEDIA_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
 
 MAX_IMAGE_BYTES: int = 10 * 1024 * 1024  # 10 MB per image
 
@@ -82,13 +82,16 @@ def _sniff_media_type(data: bytes) -> str | None:
     return None
 
 
-async def _read_validated(upload: UploadFile, field: str) -> bytes:
+async def _read_validated(upload: UploadFile, field: str) -> tuple[bytes, str]:
     """
     Read an uploaded image after validating:
       1. Content-Type header is an allowed MIME type  → 415
       2. File does not exceed MAX_IMAGE_BYTES         → 413
       3. Magic bytes match a supported image format   → 415
 
+    Returns (data, sniffed_mime_type).  The sniffed type is used for the
+    LiteLLM data URI rather than the client-declared Content-Type, so a
+    client sending PNG bytes with Content-Type: image/jpeg still works.
     Reading one extra byte lets us detect overflow without buffering the
     entire oversized payload first.
     """
@@ -103,12 +106,13 @@ async def _read_validated(upload: UploadFile, field: str) -> bytes:
             status_code=413,
             detail=f"{field}: file exceeds the {MAX_IMAGE_BYTES // (1024 * 1024)} MB limit",
         )
-    if _sniff_media_type(data) is None:
+    sniffed = _sniff_media_type(data)
+    if sniffed is None:
         raise HTTPException(
             status_code=415,
             detail=f"{field}: file content is not a recognized image format (JPEG, PNG, or WebP)",
         )
-    return data
+    return data, sniffed
 
 
 class IssueOut(BaseModel):
@@ -166,15 +170,18 @@ async def check_label(
     timestamp  = datetime.now(timezone.utc).isoformat()
 
     # --- Read and validate uploads ----------------------------------------------
-    front_bytes = await _read_validated(front, "front")
-    back_bytes  = await _read_validated(back, "back") if back else None
+    front_bytes, front_media_type = await _read_validated(front, "front")
+    if back:
+        back_bytes, back_media_type = await _read_validated(back, "back")
+    else:
+        back_bytes, back_media_type = None, None
 
     # --- Layer 1: extraction ---------------------------------------------------
     result, model_error, duration_ms, usage = extract(
         front_bytes=front_bytes,
-        front_media_type=front.content_type,
+        front_media_type=front_media_type,
         back_bytes=back_bytes,
-        back_media_type=back.content_type if back else None,
+        back_media_type=back_media_type,
     )
 
     # --- Layer 2: compliance check ---------------------------------------------
@@ -195,7 +202,7 @@ async def check_label(
     write_entry({
         "request_id":             request_id,
         "timestamp":              timestamp,
-        "extraction_model":       EXTRACTION_MODEL,
+        "extraction_model":       result.extraction_model if result is not None else EXTRACTION_MODEL,
         "extraction_duration_ms": round(duration_ms, 1),
         "usage":                  usage,
         "model_error":            model_error.to_dict() if model_error else None,
@@ -225,7 +232,7 @@ async def check_label(
             )
             for i in compliance.issues
         ],
-        extraction_model=EXTRACTION_MODEL,
+        extraction_model=result.extraction_model if result is not None else EXTRACTION_MODEL,
         audit_logged=AUDIT_ENABLED,
         partial_verification=partial_verification,
         input_tokens=usage.get("input_tokens")  if usage else None,

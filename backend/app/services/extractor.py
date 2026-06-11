@@ -267,13 +267,21 @@ def _extract_single(
         raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
     try:
-        return json.loads(raw), None, input_tokens, output_tokens
+        parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
         snippet = raw[:400].replace("\n", " ")
         return None, ExtractionError(
             status_code=None,
             message=f"JSON parse error: {exc} — raw response begins: {snippet}",
         ), 0, 0
+
+    if not isinstance(parsed, dict):
+        return None, ExtractionError(
+            status_code=None,
+            message=f"Model returned non-object JSON ({type(parsed).__name__}): {raw[:200]}",
+        ), 0, 0
+
+    return parsed, None, input_tokens, output_tokens
 
 
 # ---------------------------------------------------------------------------

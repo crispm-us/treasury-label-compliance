@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import call, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -193,3 +193,32 @@ def test_success_with_no_fallback():
     assert error is None
     assert result is not None
     assert result.beverage_class == "spirits"
+
+
+# ---------------------------------------------------------------------------
+# Non-dict JSON response (e.g. model returns JSON null or array)
+# ---------------------------------------------------------------------------
+
+def test_non_dict_json_returns_extraction_error():
+    """
+    _extract_single must treat a non-object JSON response (null, array, string)
+    as an error rather than returning (None, None, ...) which violates the
+    exactly-one-of-result/error invariant.
+    """
+    import litellm
+
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = "null"
+    mock_response.usage = None
+
+    with patch("litellm.completion", return_value=mock_response):
+        from backend.app.services.extractor import _extract_single
+        raw_dict, err, in_tok, out_tok = _extract_single(
+            _JPEG, "image/jpeg", "front", "test-model"
+        )
+
+    assert raw_dict is None
+    assert err is not None
+    assert "NoneType" in err.message or "non-object" in err.message
+    assert in_tok == 0
+    assert out_tok == 0
