@@ -68,15 +68,33 @@ Flash-Lite encodes the same image at significantly fewer input tokens than Haiku
 
 ---
 
-## Summary comparison
+## 2026-06-11 — Gemini 2.5 Flash (full) (`scripts/benchmark-latency.sh -n 3 gemini/gemini-2.5-flash`)
+
+**Setup:** same as three-provider benchmark above.
+
+| Scenario | Run 1 | Run 2 | Run 3 | Avg | Tokens (in+out) |
+|---|---|---|---|---|---|
+| Single panel | 6.671s | 8.024s | 6.470s | 7.055s | 1427+~1485 |
+| Two panel | ⚠ ERROR | 11.419s | 10.941s | 12.262s | 2854+~2302 |
+
+Notes:
+- Run 1 two-panel returned `verdict=ERROR` after 14.4s — likely a timeout or transient API error.
+- Output tokens (1373–1635 single panel) are 2–3× higher than Flash-Lite (609). The full Flash model runs significantly more thinking tokens per call.
+- Verdicts on successful runs were correct (`NONCOMPLIANT` / `COMPLIANT`).
+- **Conclusion:** not worth the trade-off. Flash is 2.8× slower than Flash-Lite on single panel, 2.4× on two-panel, with no observable quality improvement on these labels. Flash-Lite already returns correct verdicts; the extra reasoning budget is wasted.
+
+---
+
+## Summary comparison (all models tested)
 
 | Model | Single panel | Two panel | Quality | vs. 5s target |
 |---|---|---|---|---|
-| `gemini/gemini-2.5-flash-lite` | 2.55s | 5.11s | ✅ Correct verdicts | ✅ Single; ⚠ Two-panel borderline |
-| `anthropic/claude-haiku-4-5-20251001` | 3.77s | 7.75s | ✅ Correct verdicts | ❌ Two-panel exceeds |
+| `gemini/gemini-2.5-flash-lite` | **2.55s** | **5.11s** | ✅ Correct | ✅ Single; ⚠ Two-panel borderline |
+| `anthropic/claude-haiku-4-5-20251001` | 3.77s | 7.75s | ✅ Correct | ❌ Two-panel exceeds |
 | `openai/gpt-5.4-nano` | 4.05s | 11.82s | ⚠ Quality regression | ❌ Both exceed |
+| `gemini/gemini-2.5-flash` | 7.06s | 12.26s | ✅ Correct | ❌ Both exceed |
 
-Flash-Lite is the clear primary choice. Haiku is the correct fallback-1 (reliable, correct). gpt-5.4-nano is not recommended as fallback without prompt tuning — quality regression outweighs cost savings.
+**Chosen configuration:** Flash-Lite primary → Haiku fallback-1 → gpt-5.4-nano fallback-2 (last resort; not validated for production without prompt tuning). Flash (full) offers no latency or quality advantage over Flash-Lite for this workload and is not recommended.
 
 ---
 
