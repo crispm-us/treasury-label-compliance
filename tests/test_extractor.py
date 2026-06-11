@@ -298,3 +298,99 @@ def test_non_dict_json_returns_extraction_error():
     assert "NoneType" in err.message or "non-object" in err.message
     assert in_tok == 0
     assert out_tok == 0
+
+
+# ---------------------------------------------------------------------------
+# Empty / malformed response content (crash guard)
+# ---------------------------------------------------------------------------
+
+def test_empty_choices_returns_extraction_error():
+    """
+    Empty choices list must produce ExtractionError, not IndexError.
+    Some model providers can return a response with an empty choices array
+    under certain error conditions.
+    """
+    mock_response = MagicMock()
+    mock_response.choices = []
+    mock_response.usage = None
+
+    with patch("litellm.completion", return_value=mock_response):
+        from backend.app.services.extractor import _extract_single
+        raw_dict, err, in_tok, out_tok = _extract_single(
+            _JPEG, "image/jpeg", "front", "test-model"
+        )
+
+    assert raw_dict is None
+    assert err is not None
+    assert "empty" in err.message.lower() or "malformed" in err.message.lower()
+
+
+def test_none_content_returns_extraction_error():
+    """
+    choices[0].message.content = None must produce ExtractionError, not
+    AttributeError on the .strip() call.
+    """
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = None
+    mock_response.usage = None
+
+    with patch("litellm.completion", return_value=mock_response):
+        from backend.app.services.extractor import _extract_single
+        raw_dict, err, in_tok, out_tok = _extract_single(
+            _JPEG, "image/jpeg", "front", "test-model"
+        )
+
+    assert raw_dict is None
+    assert err is not None
+    assert "empty" in err.message.lower()
+
+
+# ---------------------------------------------------------------------------
+# Confidence string validation and not_found→null invariant
+# ---------------------------------------------------------------------------
+
+def test_invalid_confidence_returns_extraction_error():
+    """
+    A field with an unrecognized confidence string must be rejected.
+    Invalid confidence values would otherwise silently rank as 0 (same as
+    not_found) via _CONF_RANK.get(..., 0) — this surfaces the model drift early.
+    """
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["brand_name"]["confidence"] = "medium"  # not in {high, low, not_found}
+
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = json.dumps(data)
+    mock_response.usage = None
+
+    with patch("litellm.completion", return_value=mock_response):
+        from backend.app.services.extractor import _extract_single
+        raw_dict, err, in_tok, out_tok = _extract_single(
+            _JPEG, "image/jpeg", "front", "test-model"
+        )
+
+    assert raw_dict is None
+    assert err is not None
+    assert "medium" in err.message or "confidence" in err.message.lower()
+
+
+def test_not_found_with_non_null_value_returns_extraction_error():
+    """
+    A field with confidence='not_found' and a non-null value violates ADR-011 schema.
+    The invariant is currently prompt-only; this test covers the post-parse enforcement.
+    """
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["brand_name"] = {"value": "Sunset Ale", "confidence": "not_found"}
+
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = json.dumps(data)
+    mock_response.usage = None
+
+    with patch("litellm.completion", return_value=mock_response):
+        from backend.app.services.extractor import _extract_single
+        raw_dict, err, in_tok, out_tok = _extract_single(
+            _JPEG, "image/jpeg", "front", "test-model"
+        )
+
+    assert raw_dict is None
+    assert err is not None
+    assert "not_found" in err.message

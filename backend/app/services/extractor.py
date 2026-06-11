@@ -156,6 +156,7 @@ _NO_RETRY_STATUS_CODES: frozenset[int] = frozenset({400, 401})
 # ---------------------------------------------------------------------------
 
 _CONF_RANK = {"high": 2, "low": 1, "not_found": 0}
+_VALID_CONF = frozenset({"high", "low", "not_found"})
 
 
 def _merge_panels(front: dict, back: dict) -> dict:
@@ -261,7 +262,21 @@ def _extract_single(
     input_tokens  = int(getattr(usage, "prompt_tokens",     0) or 0)
     output_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
 
-    raw = response.choices[0].message.content.strip()
+    # Guard against empty or malformed response structure (empty choices list,
+    # missing message attribute, or None content).
+    try:
+        raw = response.choices[0].message.content
+    except (IndexError, AttributeError):
+        return None, ExtractionError(
+            status_code=None,
+            message="Model returned empty or malformed response structure (no content in choices)",
+        ), input_tokens, output_tokens
+    if not raw:
+        return None, ExtractionError(
+            status_code=None,
+            message="Model returned empty content in response",
+        ), input_tokens, output_tokens
+    raw = raw.strip()
     # Strip markdown code fences if the model wraps the JSON despite the instruction
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
@@ -280,6 +295,32 @@ def _extract_single(
             status_code=None,
             message=f"Model returned non-object JSON ({type(parsed).__name__}): {raw[:200]}",
         ), 0, 0
+
+    # Validate confidence enum values and the not_found→null invariant for all fields.
+    # Invalid confidence strings currently rank as 0 in _CONF_RANK (silently treated
+    # as not_found); catching them here surfaces model/prompt drift early.
+    _fields = parsed.get("fields")
+    if isinstance(_fields, dict):
+        for _fname, _fobj in _fields.items():
+            if not isinstance(_fobj, dict):
+                continue
+            _conf = _fobj.get("confidence")
+            if _conf not in _VALID_CONF:
+                return None, ExtractionError(
+                    status_code=None,
+                    message=(
+                        f"Field '{_fname}' has invalid confidence {_conf!r} — "
+                        f"must be one of {sorted(_VALID_CONF)}"
+                    ),
+                ), 0, 0
+            if _conf == "not_found" and _fobj.get("value") is not None:
+                return None, ExtractionError(
+                    status_code=None,
+                    message=(
+                        f"Field '{_fname}' has confidence 'not_found' but non-null value "
+                        f"{_fobj['value']!r} — 'not_found' requires value: null"
+                    ),
+                ), 0, 0
 
     return parsed, None, input_tokens, output_tokens
 

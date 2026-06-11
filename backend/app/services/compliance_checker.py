@@ -238,7 +238,7 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
                 field="gws_header", found=f.gws_header.value,
                 expected=(
                     f'Header must be exactly "{GWS_CANONICAL_HEADER}" '
-                    "in all-caps bold type (27 CFR §16.22(a)(2))"
+                    "in all-caps (27 CFR §16.22(a)(2))"
                 ),
             ))
     else:
@@ -321,12 +321,14 @@ def _check_spirits(f: ExtractionFields, issues: list[Issue]) -> None:
 
     # R-DS-03: ABV is mandatory for spirits
     abv_present = _check_mandatory(f.abv_pct, "R-DS-03", "abv_pct", "Alcohol content (ABV)", issues)
-    if abv_present and f.abv_pct.confidence == "high":
+    if abv_present and f.abv_pct.confidence in ("high", "low"):
         try:
             abv = float(f.abv_pct.value)
             if not (20.0 <= abv <= 95.0):
+                # low confidence → warning (uncertain reading); high → definitive error
+                sev: Literal["error", "warning"] = "error" if f.abv_pct.confidence == "high" else "warning"
                 issues.append(Issue(
-                    rule_id="R-DS-03", severity="error",
+                    rule_id="R-DS-03", severity=sev,
                     field="abv_pct", found=f.abv_pct.value,
                     expected="ABV must be within 20%–95% for distilled spirits (27 CFR §5.36)",
                 ))
@@ -372,12 +374,14 @@ def _check_wine(f: ExtractionFields, issues: list[Issue]) -> None:
 
     # R-WN-03: ABV mandatory for wine
     abv_present = _check_mandatory(f.abv_pct, "R-WN-03", "abv_pct", "Alcohol content (ABV)", issues)
-    if abv_present and f.abv_pct.confidence == "high":
+    if abv_present and f.abv_pct.confidence in ("high", "low"):
         try:
             abv = float(f.abv_pct.value)
             if not (0.5 <= abv <= 24.0):
+                # low confidence → warning (uncertain reading); high → definitive error
+                sev = "error" if f.abv_pct.confidence == "high" else "warning"
                 issues.append(Issue(
-                    rule_id="R-WN-03", severity="error",
+                    rule_id="R-WN-03", severity=sev,
                     field="abv_pct", found=f.abv_pct.value,
                     expected="ABV must be within 0.5%–24.0% for wine (27 CFR §4.36)",
                 ))
@@ -411,6 +415,7 @@ def _check_wine(f: ExtractionFields, issues: list[Issue]) -> None:
                     "Vintage date detected but appellation of origin not visible — "
                     "appellation required when vintage is stated (27 CFR §4.27)"
                 ),
+                not_found=f.appellation.confidence == "not_found",
             ))
 
 

@@ -41,14 +41,14 @@ Beer / malt beverages (27 CFR Part 7):
 Distilled spirits (27 CFR Part 5):
 - **R-DS-01**: Brand name required
 - **R-DS-02**: Class/type designation required
-- **R-DS-03**: ABV required; range check (20%–95%); proof consistency check (proof = 2 × ABV ± 0.3)
+- **R-DS-03**: ABV required; range check (20%–95%) at `high` confidence (error) and `low` confidence (warning); proof consistency check (proof = 2 × ABV ± 0.3)
 - **R-DS-04**: Net contents (metric) required
 - **R-DS-06**: Distiller/bottler name and address required
 
 Wine (27 CFR Part 4):
 - **R-WN-01**: Brand name required
 - **R-WN-02**: Class/type designation required
-- **R-WN-03**: ABV required; range check (0.5%–24.0%)
+- **R-WN-03**: ABV required; range check (0.5%–24.0%) at `high` confidence (error) and `low` confidence (warning)
 - **R-WN-04**: Net contents (metric) required
 - **R-WN-05**: Winery/bottler name and address required
 - **R-WN-08**: Appellation required when vintage is stated; `not_found=True` when appellation was not visible
@@ -74,9 +74,9 @@ LiteLLM is the provider abstraction layer (`extractor.py` uses `litellm.completi
 - Magic-byte check is a necessary but not sufficient guard against corrupt uploads: a file with a valid header but a truncated or corrupt body passes validation and will produce an `ERROR` verdict from Layer 1. For production, the recommended addition is a minimum file size threshold (e.g. 4 KB — no real label at any useful resolution is smaller) plus optionally `Pillow.Image.verify()` for full structural validation. `Pillow` is not a current dependency; adding it is the production upgrade path.
 
 ### Test suite
-- 49 tests, 0 failures on Python 3.14
+- 55 tests, 0 failures on Python 3.10
 - All extraction mocked — no API key required, no network calls
-- Coverage: all verdict paths, all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401 no-retry, 400 no-retry, all-fallbacks-exhausted), non-dict JSON guard in `_extract_single`, upload size limit (413), magic-byte MIME validation (415), `image/jpg` alias, API key auth, token usage fields in response, partial verification flag, two-panel readable merge, empty-string and whitespace-only mandatory field bypass
+- Coverage: all verdict paths, all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401 no-retry, 400 no-retry, all-fallbacks-exhausted), non-dict JSON guard in `_extract_single`, empty-choices and null-content crash guard in `_extract_single`, invalid confidence string rejection, `not_found`-with-non-null-value rejection, low-confidence ABV range check (R-DS-03, R-WN-03), upload size limit (413), magic-byte MIME validation (415), `image/jpg` alias, API key auth, token usage fields in response, partial verification flag, two-panel token summation, two-panel readable merge, empty-string and whitespace-only mandatory field bypass
 
 ---
 
@@ -121,9 +121,6 @@ ADR-007 documents a batch endpoint for processing multiple labels in a single re
 Comparison of extracted GWS text against the canonical body (27 CFR §16.21) uses whitespace normalization only. A production version should also normalize Unicode (e.g. smart quotes → straight quotes, em-dashes → hyphens, zero-width spaces, ligatures) before comparison, since model transcription can introduce these. This is a **deterministic text-processing problem**: `unicodedata.normalize("NFKC", text)` plus an explicit character map would be sufficient. It is deferred because real printed labels use standard ASCII in practice, making this a low-probability edge case for the prototype.
 
 Note: Unicode normalization and R-GW-04 bold detection are superficially similar (both deferred text/visual analysis tasks) but differ fundamentally in nature. Unicode normalization is a known, solvable implementation task with no accuracy uncertainty. Bold detection is a probabilistic visual classification problem whose accuracy is empirically unknown; deploying it without calibration would introduce false positives. They are deferred for different reasons and require different production investment.
-
-### ABV range check for `low`-confidence values
-The ABV range check (R-DS-03, R-WN-03) only runs at `high` confidence. A `low`-confidence ABV that is clearly out of range (e.g. 150%) is not flagged.
 
 ---
 

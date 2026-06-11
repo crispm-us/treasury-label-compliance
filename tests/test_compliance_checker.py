@@ -262,3 +262,39 @@ def test_whitespace_only_mandatory_field_is_treated_as_absent():
     assert r.verdict == "NONCOMPLIANT"
     error_rules = {i.rule_id for i in r.errors}
     assert "R-MB-01" in error_rules
+
+
+# ---------------------------------------------------------------------------
+# Low-confidence ABV range checks (R-DS-03, R-WN-03)
+# ---------------------------------------------------------------------------
+
+def test_spirits_low_confidence_abv_out_of_range():
+    """
+    R-DS-03 range check runs at low confidence — clearly impossible ABV should
+    not pass silently.  Low confidence → warning (not error), since the reading
+    is uncertain.
+
+    Proof is set to not_found to avoid triggering the proof-consistency check
+    (which would also fire R-DS-03 as an error and obscure the result).
+    """
+    data = json.loads((FIXTURES / "spirits_compliant.json").read_text())
+    data["fields"]["abv_pct"] = {"value": 150.0, "confidence": "low"}
+    data["fields"]["proof"] = {"value": None, "confidence": "not_found"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    warning_rules = {i.rule_id for i in r.warnings}
+    assert "R-DS-03" in warning_rules, "Low-confidence out-of-range ABV must fire R-DS-03 as warning"
+    # Must NOT be an error — evidence is uncertain
+    assert "R-DS-03" not in {i.rule_id for i in r.errors}
+
+
+def test_wine_low_confidence_abv_out_of_range():
+    """
+    R-WN-03 range check runs at low confidence.
+    50.0% ABV is outside wine range (0.5%–24.0%); low confidence → warning.
+    """
+    data = json.loads((FIXTURES / "wine_compliant.json").read_text())
+    data["fields"]["abv_pct"] = {"value": 50.0, "confidence": "low"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    warning_rules = {i.rule_id for i in r.warnings}
+    assert "R-WN-03" in warning_rules, "Low-confidence out-of-range wine ABV must fire R-WN-03 as warning"
+    assert "R-WN-03" not in {i.rule_id for i in r.errors}
