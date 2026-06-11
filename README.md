@@ -183,6 +183,7 @@ Provider API keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, etc.) are read automatica
 - [`docs/adr/`](docs/adr/) — Architecture Decision Records (ADR-001 through ADR-011)
 - [`docs/rules/`](docs/rules/) — TTB rule reference by beverage class
 - [`docs/requirements-analysis.md`](docs/requirements-analysis.md) — Regulatory scope and rule mapping
+- [`docs/latency-benchmarks.md`](docs/latency-benchmarks.md) — Observed extraction latency across four models; benchmark script usage
 - [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) — What is built vs. deliberately deferred; authoritative source on scope
 - [`docs/DEPLOYMENT_CHECKLIST.md`](docs/DEPLOYMENT_CHECKLIST.md) — Pre-push and Railway deployment steps
 
