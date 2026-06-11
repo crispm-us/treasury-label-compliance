@@ -15,6 +15,7 @@ Docs (auto-generated):
 from __future__ import annotations
 
 import dataclasses
+import secrets
 import uuid
 from datetime import datetime, timezone
 from io import BytesIO
@@ -42,7 +43,7 @@ _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 async def _require_api_key(key: str | None = Security(_api_key_header)) -> None:
-    if API_KEY and key != API_KEY:
+    if API_KEY and (not key or not secrets.compare_digest(key, API_KEY)):
         raise HTTPException(status_code=401, detail="Missing or invalid X-API-Key header.")
 
 
@@ -235,21 +236,28 @@ async def check_label(
     )
 
     # --- Audit -----------------------------------------------------------------
-    write_entry({
-        "request_id":             request_id,
-        "timestamp":              timestamp,
-        "extraction_model":       result.extraction_model if result is not None else EXTRACTION_MODEL,
-        "extraction_duration_ms": round(duration_ms, 1),
-        "usage":                  usage,
-        "model_error":            model_error.to_dict() if model_error else None,
-        "extraction_result":      extraction_dict,
-        "verdict":                compliance.verdict,
-        "beverage_class":         compliance.beverage_class,
-        "issues": [
-            {"rule_id": i.rule_id, "severity": i.severity, "field": i.field}
-            for i in compliance.issues
-        ],
-    })
+    # Audit failure must not surface as HTTP 500 — the compliance result is
+    # already computed and the caller deserves a response.  Log the failure
+    # internally and set audit_logged=False so callers know the entry was lost.
+    audit_logged_ok = AUDIT_ENABLED
+    try:
+        write_entry({
+            "request_id":             request_id,
+            "timestamp":              timestamp,
+            "extraction_model":       result.extraction_model if result is not None else EXTRACTION_MODEL,
+            "extraction_duration_ms": round(duration_ms, 1),
+            "usage":                  usage,
+            "model_error":            model_error.to_dict() if model_error else None,
+            "extraction_result":      extraction_dict,
+            "verdict":                compliance.verdict,
+            "beverage_class":         compliance.beverage_class,
+            "issues": [
+                {"rule_id": i.rule_id, "severity": i.severity, "field": i.field}
+                for i in compliance.issues
+            ],
+        })
+    except Exception:
+        audit_logged_ok = False
 
     # --- Response --------------------------------------------------------------
     return CheckResponse(
@@ -269,7 +277,7 @@ async def check_label(
             for i in compliance.issues
         ],
         extraction_model=result.extraction_model if result is not None else EXTRACTION_MODEL,
-        audit_logged=AUDIT_ENABLED,
+        audit_logged=audit_logged_ok,
         partial_verification=partial_verification,
         input_tokens=usage.get("input_tokens")  if usage else None,
         output_tokens=usage.get("output_tokens") if usage else None,

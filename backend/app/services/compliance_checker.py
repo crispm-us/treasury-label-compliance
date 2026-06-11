@@ -142,8 +142,24 @@ def _normalize(text: str | None) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-_PAREN_SPACE_RE   = re.compile(r"\)(\w)")
-_HYPHEN_BREAK_RE  = re.compile(r"-\s+")
+_PAREN_SPACE_RE      = re.compile(r"\)(\w)")
+_HYPHEN_BREAK_RE     = re.compile(r"-\s+")
+_GWS_HEADER_PREFIX_RE = re.compile(r"^GOVERNMENT\s+WARNING\s*:\s*", re.IGNORECASE)
+
+
+def _strip_gws_header_prefix(text: str) -> str:
+    """
+    Remove a leading 'GOVERNMENT WARNING:' prefix from GWS body text.
+
+    Some vision models concatenate the header into the body field rather than
+    returning them separately.  Without this strip, a compliant label whose
+    body was returned as 'GOVERNMENT WARNING: (1) According to...' would fail
+    the verbatim comparison and produce a false-positive R-GW-02.
+
+    Applied symmetrically to both extracted and canonical text so the
+    normalization cannot mask substantive body differences.
+    """
+    return _GWS_HEADER_PREFIX_RE.sub("", text)
 
 
 def _normalize_gws_header(text: str | None) -> str:
@@ -243,9 +259,18 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
     body_found   = f.gws_body.confidence   != "not_found" and f.gws_body.value   is not None
     gws_text_present = header_found or body_found
 
+    # Coerce gws_present.value: some models emit the JSON string "true"/"false"
+    # instead of a JSON boolean, which falls through all `is True`/`is False`
+    # identity checks and is misclassified as None (no signal → R-GW-01 warning).
+    _gws_present_val = f.gws_present.value
+    if isinstance(_gws_present_val, str):
+        _gws_present_val = {"true": True, "false": False, "yes": True, "no": False}.get(
+            _gws_present_val.strip().lower(), _gws_present_val
+        )
+
     if gws_text_present:
         gws_effectively_present: bool | None = True
-    elif f.gws_present.value is True:
+    elif _gws_present_val is True:
         # Boolean claims present but no header or body text could be extracted.
         #
         # Design choice: emit R-GW-01 as a not_found warning and return early.
@@ -269,7 +294,7 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
             not_found=True,
         ))
         return  # Cannot verify R-GW-02/03 without text
-    elif f.gws_present.value is False:
+    elif _gws_present_val is False:
         gws_effectively_present = False
     else:
         gws_effectively_present = None  # not_found / no signal
@@ -338,7 +363,9 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
         # in capital letters.  Real labels therefore always print all-caps.  We
         # verify content correctness here; the all-caps printing requirement is a
         # separate concern (not independently checked in v1).
-        if _normalize_gws_body(f.gws_body.value).upper() != _normalize_gws_body(GWS_CANONICAL_BODY).upper():
+        body_normalized    = _normalize_gws_body(_strip_gws_header_prefix(f.gws_body.value)).upper()
+        canon_normalized   = _normalize_gws_body(_strip_gws_header_prefix(GWS_CANONICAL_BODY)).upper()
+        if body_normalized != canon_normalized:
             sev = "error" if f.gws_body.confidence == "high" else "warning"
             preview = f.gws_body.value[:120] + ("…" if len(f.gws_body.value) > 120 else "")
             issues.append(Issue(

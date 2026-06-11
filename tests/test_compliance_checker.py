@@ -20,9 +20,11 @@ import pytest
 from backend.app.services.compliance_checker import (
     ExtractionResult,
     ComplianceResult,
+    GWS_CANONICAL_BODY,
     check_compliance,
     _normalize_gws_header,
     _normalize_gws_body,
+    _strip_gws_header_prefix,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures" / "extraction"
@@ -486,3 +488,81 @@ def test_gws_present_true_no_text_r_gw_01_warning():
     # Must NOT also produce R-GW-02/03 (we return early after the R-GW-01 warning)
     assert "R-GW-02" not in warning_rules
     assert "R-GW-03" not in warning_rules
+
+
+# ---------------------------------------------------------------------------
+# R-GW-02: header concatenated into body (false positive fix)
+# ---------------------------------------------------------------------------
+
+def test_strip_gws_header_prefix_removes_header():
+    """
+    _strip_gws_header_prefix must remove 'GOVERNMENT WARNING: ' from the start
+    of body text and leave text without that prefix unchanged.
+    """
+    assert _strip_gws_header_prefix("GOVERNMENT WARNING: (1) According") == "(1) According"
+    assert _strip_gws_header_prefix("GOVERNMENT  WARNING : (1) According") == "(1) According"
+    assert _strip_gws_header_prefix("(1) According") == "(1) According"   # no prefix, unchanged
+    assert _strip_gws_header_prefix(GWS_CANONICAL_BODY) == GWS_CANONICAL_BODY  # canonical unchanged
+
+
+def test_gws_body_with_header_prefix_does_not_fail_r_gw_02():
+    """
+    Regression for R-GW-02 false positive when the vision model concatenates
+    the GWS header into the body field.
+
+    A model returning gws_body = 'GOVERNMENT WARNING: (1) According to the
+    Surgeon General...' (full canonical body) on a compliant label must not
+    trigger R-GW-02.  The header prefix is stripped before comparison.
+    """
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["gws_body"] = {
+        "value":      "GOVERNMENT WARNING: " + GWS_CANONICAL_BODY,
+        "confidence": "high",
+    }
+    r = check_compliance(ExtractionResult.from_dict(data))
+    error_rules = {i.rule_id for i in r.errors}
+    assert "R-GW-02" not in error_rules, (
+        "header prefix in gws_body must not cause R-GW-02 false positive"
+    )
+    assert r.verdict == "COMPLIANT"
+
+
+# ---------------------------------------------------------------------------
+# gws_present string coercion (model emits "true"/"false" instead of boolean)
+# ---------------------------------------------------------------------------
+
+def test_gws_present_string_true_treated_as_present():
+    """
+    Regression: model returns gws_present={"value": "true", "confidence": "high"}
+    instead of {"value": true, ...}.  The string falls through all `is True`
+    identity checks and was misclassified as None → R-GW-01 not_found warning.
+    After coercion, "true" is treated as boolean True.
+
+    With valid header and body, the verdict must be COMPLIANT (no R-GW-01).
+    """
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["gws_present"] = {"value": "true", "confidence": "high"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    all_rules = {i.rule_id for i in r.issues}
+    assert "R-GW-01" not in all_rules, (
+        'gws_present="true" (string) must not fire R-GW-01 when header/body are valid'
+    )
+    assert r.verdict == "COMPLIANT"
+
+
+def test_gws_present_string_false_treated_as_absent():
+    """
+    Model returns gws_present={"value": "false", "confidence": "high"}.
+    Even with header/body not_found, the string "false" must be treated as
+    boolean False → R-GW-01 error (GWS definitively absent).
+    """
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["gws_present"] = {"value": "false", "confidence": "high"}
+    data["fields"]["gws_header"]  = {"value": None, "confidence": "not_found"}
+    data["fields"]["gws_body"]    = {"value": None, "confidence": "not_found"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    error_rules = {i.rule_id for i in r.errors}
+    assert "R-GW-01" in error_rules, (
+        'gws_present="false" (string) at high confidence must fire R-GW-01 error'
+    )
+    assert r.verdict == "NONCOMPLIANT"

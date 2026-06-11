@@ -329,6 +329,29 @@ def test_oversized_back_returns_413(client, monkeypatch):
     assert r.status_code == 413
 
 
+# ---------------------------------------------------------------------------
+# Audit write failure — must not surface as HTTP 500
+# ---------------------------------------------------------------------------
+
+def test_audit_write_failure_returns_200_with_audit_logged_false(client, monkeypatch):
+    """
+    A disk-full or permission error in write_entry must not 500.
+    The compliance result is already computed and the caller deserves a response.
+    audit_logged must be False to signal that the entry was not persisted.
+
+    The _no_audit autouse fixture patches write_entry to a no-op; we override
+    it here to raise OSError so the error-handling path is exercised.
+    """
+    monkeypatch.setattr("backend.app.main.write_entry", lambda *a, **kw: (_ for _ in ()).throw(OSError("disk full")))
+    with patch("backend.app.main.extract", return_value=_ok("beer_compliant.json")):
+        r = client.post(
+            "/v1/check",
+            files={"front": ("front.jpg", _JPEG, "image/jpeg")},
+        )
+    assert r.status_code == 200, "audit failure must not produce HTTP 500"
+    assert r.json()["audit_logged"] is False
+
+
 def test_invalid_magic_bytes_returns_415(client):
     """Correct Content-Type header but wrong file content must return 415."""
     r = client.post(
