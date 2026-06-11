@@ -1,7 +1,9 @@
 # ADR-007: Batch Processing Design
 
 Date: 2026-06-09
-Status: Accepted
+Status: Accepted — **not implemented in prototype**
+
+> **Prototype status:** Batch processing was not built. The API implements single-label submission only (`POST /v1/check`). This ADR documents the accepted design for future implementation. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
 
 ## Context
 

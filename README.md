@@ -87,6 +87,7 @@ curl http://localhost:8000/healthz
 ### Single panel
 
 ```bash
+# sunset-ale-synth-R-GW-01 is a noncompliant fixture — expect verdict: NONCOMPLIANT (R-GW-01: GWS absent)
 curl -X POST http://localhost:8000/v1/check \
   -F "front=@test-labels/beer/sunset-ale-synth-R-GW-01-front.jpg"
 ```
@@ -212,6 +213,6 @@ Notable limitations:
 
 - **Model hallucination**: The vision model can fabricate field values (particularly Government Warning Statement text) on low-quality or synthetic images. Production use requires real label scans and systematic hallucination evaluation.
 - **R-GW-04 deferred**: Bold-type requirement for the GWS header is captured in the schema but not enforced — vision-model bold detection is not reliable enough without a calibration baseline.
-- **Provider fallback, not per-call retry**: On a transient error, the extractor tries each model in `EXTRACTION_FALLBACK_MODELS` in sequence. Per-provider exponential backoff is not implemented (see ADR-008).
+- **Provider fallback, not per-call retry**: On a transient error, the extractor tries each model in `EXTRACTION_FALLBACK_MODELS` in sequence (see [ADR-001](docs/adr/001-vision-model-selection.md)). Per-provider exponential backoff is not implemented — see [ADR-008](docs/adr/008-image-preprocessing.md) §Retry strategy.
 - **Upload validation**: Size limit (10 MB) and magic-byte format check are implemented. EXIF orientation correction and resolution normalization are not.
 - **Audit log**: Written to local JSONL files. Contains extracted label text — treat as sensitive and do not commit (covered by `.gitignore`).

@@ -27,7 +27,7 @@ Several ADRs (003, 005, 007) describe designs accepted during planning but not i
 
 **Performance data:** `latency-benchmarks.md`
 
-**Pre-deploy steps:** `../docs/DEPLOYMENT_CHECKLIST.md`
+**Pre-deploy steps:** `DEPLOYMENT_CHECKLIST.md`
 
 **Test label corpus:** `../test-labels/README.md`
 

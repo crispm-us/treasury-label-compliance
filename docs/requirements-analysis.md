@@ -227,6 +227,8 @@ For Gemini, resizing to ≤768px max dimension fits in 1 tile at minimal cost.
 
 ## 6. Out of Scope (v1)
 
+> *As originally specified. Note: audit logging **was** built (see `IMPLEMENTATION_STATUS.md`); "Batch UI" and React UI were not. See `IMPLEMENTATION_STATUS.md` for the current scope.*
+
 - Integration with TTB COLA system
 - User authentication / agent accounts
 - Audit logging or decision history
@@ -239,6 +241,8 @@ For Gemini, resizing to ≤768px max dimension fits in 1 tile at minimal cost.
 ---
 
 ## 7. Acceptance Criteria (MVP)
+
+> *As originally specified. Criteria 1 (5 s SLA), 5 (Mode A), and 6 (HEIC conversion) were not met in the prototype — see `IMPLEMENTATION_STATUS.md`.*
 
 The prototype is complete when:
 
