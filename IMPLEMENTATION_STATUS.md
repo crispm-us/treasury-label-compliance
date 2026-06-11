@@ -9,7 +9,7 @@ This document maps each Architecture Decision Record to its current build state,
 ### Core two-layer pipeline (ADR-009)
 The full request path is implemented end-to-end:
 - `POST /v1/check` accepts one or two label images (JPEG, PNG, WebP)
-- Layer 1 (`backend/app/services/extractor.py`) sends images to the Claude vision API with a structured extraction prompt and returns a typed `ExtractionResult`
+- Layer 1 (`backend/app/services/extractor.py`) sends images to a configurable vision model via LiteLLM and returns a typed `ExtractionResult`
 - Layer 2 (`backend/app/services/compliance_checker.py`) applies deterministic TTB rules and returns a `ComplianceResult` with verdict and rule-mapped issues
 - The two layers are fully decoupled — Layer 2 has no AI imports and is independently unit-testable
 
@@ -18,7 +18,7 @@ The 18-field extraction schema is implemented, including:
 - `confidence` enum (`high | low | not_found`) with documented semantics
 - `verdict` enum (`COMPLIANT | NONCOMPLIANT | UNVERIFIABLE | ERROR`)
 - Two-panel merge: field-by-field highest-confidence wins; ties to non-null value; `readable` is True if either panel is readable
-- `partial_verification` flag: True when `verdict=NONCOMPLIANT` and any issue has `not_found=True`
+- `partial_verification` flag: True when `verdict=NONCOMPLIANT` and any issue has `not_found=True` (violation confirmed but some fields were not visible)
 - `not_found` flag on individual issues (distinct from a confirmed-absent field)
 - Anti-hallucination prompt instructions (do not complete GWS text from memory)
 - GWS flag contradiction fix: text evidence overrides `gws_present` boolean
@@ -51,22 +51,32 @@ Wine (27 CFR Part 4):
 - **R-WN-03**: ABV required; range check (0.5%–24.0%)
 - **R-WN-04**: Net contents (metric) required
 - **R-WN-05**: Winery/bottler name and address required
-- **R-WN-08**: Appellation required when vintage is stated
+- **R-WN-08**: Appellation required when vintage is stated; `not_found=True` when appellation was not visible
 - **R-WN-09**: Sulfite declaration warning (cannot verify SO₂ level from image)
+
+### Multi-provider model routing (ADR-001, ADR-002)
+LiteLLM is the provider abstraction layer (`extractor.py` uses `litellm.completion()`). Any LiteLLM-supported provider can be selected via the `EXTRACTION_MODEL` environment variable (format: `provider/model-name`, default: `anthropic/claude-haiku-4-5-20251001`). A sequential fallback list is configurable via `EXTRACTION_FALLBACK_MODELS` (comma-separated list of model strings). Non-retryable errors (401, 400) halt fallback immediately; all other errors (429, 500, network) try the next model in sequence. The `extraction_model` field in the API response reflects the model that actually produced the result, not the configured primary. Budget-capped API keys for Gemini Flash and GPT-4o are pending acquisition for end-to-end fallback testing.
 
 ### API and infrastructure (ADR-004, ADR-006, ADR-010)
 - FastAPI with auto-generated OpenAPI docs (`/docs`)
 - `GET /healthz` health check
 - Optional `X-API-Key` authentication (enforced when `API_KEY` env var is set; bypassed for local dev)
-- JSONL audit log with per-day rotation and thread-safe writes (`audit_logs/YYYY-MM-DD.jsonl`)
+- JSONL audit log with per-day rotation and thread-safe writes (`audit_logs/YYYY-MM-DD.jsonl`); includes token usage per request
 - `AUDIT_ENABLED` flag for disabling writes in tests
 - Model error capture and classification in audit log (status codes 401, 400, 429, 500/529)
 - `uv`-managed dependencies with `uv.lock` for reproducible installs
 
+### Upload validation (ADR-008)
+- Upload size limit: 10 MB per image; returns 413 before reading the full payload (reads `MAX_IMAGE_BYTES + 1` bytes to detect overflow efficiently)
+- Magic-byte MIME validation: returns 415 when file content does not match a recognized JPEG/PNG/WebP signature, regardless of the `Content-Type` header supplied by the client
+- `Content-Type: image/jpg` accepted as an alias for `image/jpeg` (common client mislabeling)
+- Sniffed MIME type used for the LiteLLM data URI, not the client-declared type — a client sending PNG bytes with `Content-Type: image/jpeg` is handled correctly
+- Magic-byte check is a necessary but not sufficient guard against corrupt uploads: a file with a valid header but a truncated or corrupt body passes validation and will produce an `ERROR` verdict from Layer 1. For production, the recommended addition is a minimum file size threshold (e.g. 4 KB — no real label at any useful resolution is smaller) plus optionally `Pillow.Image.verify()` for full structural validation. `Pillow` is not a current dependency; adding it is the production upgrade path.
+
 ### Test suite
-- 36 tests, 0 failures on Python 3.14
+- 47 tests, 0 failures on Python 3.14
 - All extraction mocked — no API key required, no network calls
-- Coverage: all verdict paths, all implemented rule IDs, model API failures, partial verification flag, API key auth, two-panel readable merge, empty-string mandatory field bypass
+- Coverage: all verdict paths, all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401 no-retry, 400 no-retry, all-fallbacks-exhausted), non-dict JSON guard in `_extract_single`, upload size limit (413), magic-byte MIME validation (415), `image/jpg` alias, API key auth, token usage fields in response, partial verification flag, two-panel readable merge, empty-string and whitespace-only mandatory field bypass
 
 ---
 
@@ -75,27 +85,22 @@ Wine (27 CFR Part 4):
 ### R-GW-04 — GWS bold-type requirement
 **ADR reference:** ADR-011 §Deferred rules
 
-The GWS header must be bold and the body must not be bold (27 CFR §16.22(a)(2)). The `gws_header_bold` and `gws_body_bold` fields are extracted and stored in the schema but not evaluated. Vision-model bold detection is not reliable without a calibration baseline on real labels. Activate after evaluating accuracy on a representative sample.
+The GWS header must be bold and the body must not be bold (27 CFR §16.22(a)(2)). The `gws_header_bold` and `gws_body_bold` fields are extracted and stored in the schema but not evaluated. This is a **probabilistic visual classification problem**: the model must judge whether printed text appears bold — a property that varies with font weight, contrast, image quality, and camera angle. There is no post-processing step that corrects an incorrect visual observation; false positives would flag compliant labels. Activate only after evaluating accuracy against a labeled sample of real labels.
 
 ### R-MB-03 — Flavored malt beverage ABV rule
 **ADR reference:** ADR-011
 
 ABV is mandatory for flavored malt beverages and products where flavor contributes alcohol, but not for traditional beer/ale/lager/stout. The current implementation issues a warning for any beer label where ABV is not visible. The correct production behavior requires detecting whether the product is a flavored malt beverage, which is difficult from label text alone.
 
-### Multi-provider model routing (ADR-001, ADR-002)
-**ADR reference:** ADR-001 §Multi-provider strategy, ADR-002
-
-Implemented. LiteLLM is the abstraction layer (`extractor.py` uses `litellm.completion()`). Any LiteLLM-supported provider can be selected via `EXTRACTION_MODEL` (format: `provider/model-name`). A sequential fallback list is configurable via `EXTRACTION_FALLBACK_MODELS` (comma-separated). Non-retryable errors (401, 400) halt fallback immediately; all other errors (429, 500, network) try the next model. Budget-capped API keys for Gemini and GPT-4o are still pending acquisition.
-
 ### Retry and backoff (ADR-008)
 **ADR reference:** ADR-008 §Retry strategy
 
-The extractor makes a single model call per panel with no retry on transient failures. The audit log documents recommended actions per status code (exponential backoff for 429, do-not-retry for 401/400), but no retry loop is implemented.
+The extractor implements sequential provider-switching fallback: on a retryable error (429, 500, network) it tries each model in `EXTRACTION_FALLBACK_MODELS` in order before giving up. What is **not** implemented is per-provider exponential backoff with jitter — the extractor makes a single attempt per model and moves on. The audit log documents recommended per-status-code actions (exponential backoff for 429, do-not-retry for 401/400). A production implementation would add a retry loop with jitter around each model call.
 
 ### Image preprocessing pipeline (ADR-008)
 **ADR reference:** ADR-008
 
-ADR-008 documents preprocessing steps. Implemented: upload size limit (10 MB per image, returns 413), magic-byte MIME validation (returns 415 when file content does not match a recognized JPEG/PNG/WebP signature, regardless of the Content-Type header). Not implemented: orientation correction (EXIF), resolution normalization, contrast enhancement for low-quality scans.
+Not implemented: orientation correction (EXIF), resolution normalization, contrast enhancement for low-quality scans. See the Upload validation section above for what is implemented and for the minimum-file-size / Pillow production upgrade path.
 
 ### Frontend (ADR-005)
 **ADR reference:** ADR-005
@@ -113,7 +118,9 @@ ADR-007 documents a batch endpoint for processing multiple labels in a single re
 `ExtractionResult.from_dict` accepts any `schema_version` value without validation. A production implementation should reject or flag results with an unexpected schema version to catch model prompt / schema drift.
 
 ### Unicode normalization for GWS verbatim check
-Comparison of extracted GWS text against the canonical body (27 CFR §16.21) uses whitespace normalization only. A production version should also normalize Unicode (e.g. smart quotes, em-dashes, non-breaking spaces) before comparison, since OCR output and model transcription can introduce these.
+Comparison of extracted GWS text against the canonical body (27 CFR §16.21) uses whitespace normalization only. A production version should also normalize Unicode (e.g. smart quotes → straight quotes, em-dashes → hyphens, zero-width spaces, ligatures) before comparison, since model transcription can introduce these. This is a **deterministic text-processing problem**: `unicodedata.normalize("NFKC", text)` plus an explicit character map would be sufficient. It is deferred because real printed labels use standard ASCII in practice, making this a low-probability edge case for the prototype.
+
+Note: Unicode normalization and R-GW-04 bold detection are superficially similar (both deferred text/visual analysis tasks) but differ fundamentally in nature. Unicode normalization is a known, solvable implementation task with no accuracy uncertainty. Bold detection is a probabilistic visual classification problem whose accuracy is empirically unknown; deploying it without calibration would introduce false positives. They are deferred for different reasons and require different production investment.
 
 ### ABV range check for `low`-confidence values
 The ABV range check (R-DS-03, R-WN-03) only runs at `high` confidence. A `low`-confidence ABV that is clearly out of range (e.g. 150%) is not flagged.
