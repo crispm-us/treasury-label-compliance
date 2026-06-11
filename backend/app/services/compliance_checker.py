@@ -261,7 +261,12 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
     # from substantive text changes, both for human review triage and for any
     # waiver process.  For now, the check is strictly verbatim.
     if f.gws_body.confidence != "not_found" and f.gws_body.value is not None:
-        if _normalize(f.gws_body.value) != _normalize(GWS_CANONICAL_BODY):
+        # Comparison is case-insensitive: the CFR canonical text is mixed-case but
+        # TTB regulations (27 CFR §16.22(a)(2)) require the statement to be printed
+        # in capital letters.  Real labels therefore always print all-caps.  We
+        # verify content correctness here; the all-caps printing requirement is a
+        # separate concern (not independently checked in v1).
+        if _normalize(f.gws_body.value).upper() != _normalize(GWS_CANONICAL_BODY).upper():
             sev = "error" if f.gws_body.confidence == "high" else "warning"
             preview = f.gws_body.value[:120] + ("…" if len(f.gws_body.value) > 120 else "")
             issues.append(Issue(

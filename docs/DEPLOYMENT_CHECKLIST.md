@@ -76,17 +76,45 @@ curl -X POST https://<URL>/v1/check \
 
 ## 6. Real label testing (complete before submitting to interviewers)
 
-Synthetic labels are sufficient for demonstrating the architecture, but real label scans will reveal edge cases (model hallucinations, OCR ambiguity, non-standard layouts). Test at minimum:
+Synthetic labels are sufficient for demonstrating the architecture, but real label scans reveal edge cases (model hallucinations, OCR ambiguity, non-standard layouts). Real label images live in `test-labels/`.
 
-- [ ] Beer can — front + back panels
-- [ ] Spirits bottle — front + back panels
-- [ ] Wine bottle — front + back panels
+### Front/back convention for real photographs
 
-Document any new issues found in `docs/project-log.md`.
+"Front" and "back" are semantic submission slots, not geometric labels. The merger is panel-agnostic — which face goes in which slot does not affect the outcome. Practical guidance:
+
+- **Front:** the face with the brand name and class/type designation.
+- **Back:** the face with the most compliance-critical text not already on the front — typically the Government Warning Statement plus bottler/importer name and address.
+- If those are on separate faces (e.g. a cylindrical can where the GWS is on a narrow end panel), prefer the GWS face as "back" — that is the highest-stakes compliance content.
+
+**Type (i) — manufacturer-supplied flat images** (our synthetic labels, or a scanned flat label sheet): the convention maps cleanly. Two panels cover 100% of the label content.
+
+**Type (ii) — real photographs of bottles or cans:** works well for standard two-face layouts (most wine/spirits bottles; most US beer cans). Edge cases:
+
+- *Three-face cylindrical cans* (e.g. Henninger, where the GWS is on the end panel): a two-panel submission must choose two of three faces. The missed face produces not_found warnings → UNVERIFIABLE rather than a false NONCOMPLIANT.
+- *Upside-down or rotated photos:* the vision model handles orientation — the Henninger GWS images are upside-down in the photo and still readable.
+- *Extreme angles, glare, heavy curvature:* produce low-confidence or not_found results → UNVERIFIABLE rather than a false verdict.
+
+### Available real label pairs
+
+| Product | Front | Back/GWS | Notes |
+|---|---|---|---|
+| Henninger Lager (beer, imported DE) | `henninger-real-front.jpg` | `henninger-real-gws.jpg` | GWS face upside-down in photo; importer info on a separate third face (`henninger-real-back.jpg`) |
+| Stiegl Radler Grapefruit (malt bev., imported AT) | `stiegl-radler-grapefruit-front.jpg` | `stiegl-radler-grapefruit-back.jpg` | Clean two-panel pair; 2.5% ABV; full importer address on back |
+
+**HEIC rejection test:** `stiegl-radler-grapefruit-front.heic` — submit to verify 415 is returned for iPhone HEIC uploads.
+
+The smoke test (`scripts/smoke-test.sh`) includes real-label calls for both pairs.
+
+### To-do before interviewer submission
+
+- [ ] Run Henninger front + GWS smoke test; document result in `docs/project-log.md`
+- [ ] Run Stiegl two-panel smoke test; document result
+- [ ] Acquire and test a spirits bottle — front + back panels
+- [ ] Acquire and test a wine bottle — front + back panels
 
 ---
 
-## 6. Interview submission notes
+## 7. Interview submission notes
 
 - `docs/project-log.md` (sanitized) — shows design thinking, iteration, and debugging process.
 - `docs/adr/` — shows architectural decision-making with explicit trade-off reasoning.

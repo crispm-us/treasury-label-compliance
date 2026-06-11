@@ -140,6 +140,44 @@ check "Valid Content-Type, wrong magic bytes → 415" \
     -X POST "${BASE_URL}/v1/check" \
     -F "front=@docs/rules/beer-malt.md;type=image/jpeg"
 
+check "HEIC image (unsupported format) → 415" \
+    415 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/beer/stiegl-radler-grapefruit-front.heic"
+
+# Oversized test: generate a synthetic JPEG-headed file > 10 MB in-script (no stored blob).
+_OVERSIZED=$(mktemp /tmp/oversized-XXXXXX.jpg)
+printf '\xff\xd8\xff\xe0\x00\x10JFIF' > "$_OVERSIZED"
+dd if=/dev/zero bs=1M count=11 >> "$_OVERSIZED" 2>/dev/null
+check "Oversized image (11 MB) → 413" \
+    413 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@${_OVERSIZED}"
+rm -f "$_OVERSIZED"
+
+# ---------------------------------------------------------------------------
+# Real-label tests — make actual model API calls; not counted in synthetic totals
+# ---------------------------------------------------------------------------
+
+printf '\n%s\n\n' "--- Real-label tests (live model calls) ---"
+
+check "Henninger real front only → 200 (UNVERIFIABLE expected — GWS on separate face)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/beer/henninger-real-front.jpg"
+
+check "Henninger real front + GWS face → 200 (GWS upside-down in photo — tests orientation)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/beer/henninger-real-front.jpg" \
+    -F "back=@test-labels/beer/henninger-real-gws.jpg"
+
+check "Stiegl Radler real two-panel → 200 (flavored malt beverage, imported)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/beer/stiegl-radler-grapefruit-front.jpg" \
+    -F "back=@test-labels/beer/stiegl-radler-grapefruit-back.jpg"
+
 if [[ -n "$API_KEY" ]]; then
     # Send no key intentionally — expects 401
     response=$(curl -s \

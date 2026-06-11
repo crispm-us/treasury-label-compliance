@@ -158,7 +158,7 @@ All tests mock the extraction layer — no API key or network access required.
 uv run --with pytest pytest tests/ -v
 ```
 
-55 tests covering: verdict paths (compliant, noncompliant, unverifiable, error), all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401/400 no-retry, all-fallbacks-exhausted), non-dict JSON guard, upload size limit (413), magic-byte MIME validation (415), API key auth, token usage fields, partial verification flag, two-panel token summation, readable merge, and empty/whitespace mandatory field bypass. See `tests/test_api.py`, `tests/test_extractor.py`, and `tests/test_compliance_checker.py`.
+56 tests covering: verdict paths (compliant, noncompliant, unverifiable, error), all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401/400 no-retry, all-fallbacks-exhausted), non-dict JSON guard, upload size limit (413), magic-byte MIME validation (415), API key auth, token usage fields, partial verification flag, two-panel token summation, readable merge, and empty/whitespace mandatory field bypass. See `tests/test_api.py`, `tests/test_extractor.py`, and `tests/test_compliance_checker.py`.
 
 ---
 

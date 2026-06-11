@@ -287,6 +287,28 @@ def test_spirits_low_confidence_abv_out_of_range():
     assert "R-DS-03" not in {i.rule_id for i in r.errors}
 
 
+def test_gws_body_all_caps_passes_r_gw_02():
+    """
+    Real labels print the GWS body in all-caps (required by 27 CFR §16.22(a)(2)).
+    R-GW-02 checks content, not case; an all-caps body matching the canonical
+    text must not fire R-GW-02.
+    """
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["gws_body"]["value"] = (
+        "(1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC "
+        "BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. "
+        "(2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A "
+        "CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS."
+    )
+    data["fields"]["gws_body"]["confidence"] = "high"
+    r = check_compliance(ExtractionResult.from_dict(data))
+    gws_issues = [i for i in r.issues if i.rule_id == "R-GW-02"]
+    assert not gws_issues, (
+        "All-caps GWS body matching canonical content must pass R-GW-02 — "
+        "real labels always print all-caps per 27 CFR §16.22(a)(2)"
+    )
+
+
 def test_wine_low_confidence_abv_out_of_range():
     """
     R-WN-03 range check runs at low confidence.
