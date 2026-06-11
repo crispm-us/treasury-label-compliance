@@ -142,6 +142,56 @@ def _normalize(text: str | None) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+_PAREN_SPACE_RE   = re.compile(r"\)(\w)")
+_HYPHEN_BREAK_RE  = re.compile(r"-\s+")
+
+
+def _normalize_gws_header(text: str | None) -> str:
+    """
+    Normalize GWS header text for verbatim comparison.
+
+    Extends _normalize() with a colon-space fix: strips any whitespace
+    that appears immediately before a colon.  This corrects an OCR artifact
+    where the vision model reads "GOVERNMENT WARNING :" (space before colon)
+    instead of "GOVERNMENT WARNING:".
+
+    Applied symmetrically to both extracted text and the canonical constant.
+    """
+    return re.sub(r"\s+:", ":", _normalize(text))
+
+
+def _normalize_gws_body(text: str | None) -> str:
+    """
+    Normalize GWS body text for verbatim comparison.
+
+    Extends _normalize() with three OCR-artifact corrections, applied in order:
+
+    1. Hyphen-break join: removes "- " sequences produced when the vision model
+       reads a word that is hyphenated across a line on a narrow-column label:
+           'BE- CAUSE'     →  'BECAUSE'
+           'CON- SUMPTION' →  'CONSUMPTION'
+           'MA- CHINERY'   →  'MACHINERY'
+
+    2. Period-paren space: inserts a space between a sentence-ending period and
+       an opening parenthesis, e.g. when the model reads "(2)" flush against the
+       preceding sentence with no gap:
+           'BIRTH DEFECTS.(2) Consumption'  →  'BIRTH DEFECTS. (2) Consumption'
+
+    3. Paren-word space: inserts a space between a closing parenthesis and the
+       immediately following word character:
+           '(1)According to…'  →  '(1) According to…'
+           '(2)Consumption…'   →  '(2) Consumption…'
+
+    Applied symmetrically to both extracted text and the canonical constant so
+    these normalizations cannot mask substantive text differences.
+    """
+    t = _normalize(text)
+    t = _HYPHEN_BREAK_RE.sub("", t)           # join hyphenated line-breaks
+    t = re.sub(r"\.\(", ". (", t)             # space between period and opening paren
+    t = _PAREN_SPACE_RE.sub(r") \1", t)       # space between closing paren and word
+    return t
+
+
 def _check_mandatory(
     fv: FieldValue,
     rule_id: str,
@@ -252,7 +302,7 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
 
     # R-GW-03: header must be exactly "GOVERNMENT WARNING:" (all-caps)
     if f.gws_header.confidence != "not_found" and f.gws_header.value is not None:
-        header = _normalize(f.gws_header.value)
+        header = _normalize_gws_header(f.gws_header.value)
         if header != GWS_CANONICAL_HEADER:
             sev = "error" if f.gws_header.confidence == "high" else "warning"
             issues.append(Issue(
@@ -288,7 +338,7 @@ def _check_gws(f: ExtractionFields, issues: list[Issue]) -> None:
         # in capital letters.  Real labels therefore always print all-caps.  We
         # verify content correctness here; the all-caps printing requirement is a
         # separate concern (not independently checked in v1).
-        if _normalize(f.gws_body.value).upper() != _normalize(GWS_CANONICAL_BODY).upper():
+        if _normalize_gws_body(f.gws_body.value).upper() != _normalize_gws_body(GWS_CANONICAL_BODY).upper():
             sev = "error" if f.gws_body.confidence == "high" else "warning"
             preview = f.gws_body.value[:120] + ("…" if len(f.gws_body.value) > 120 else "")
             issues.append(Issue(

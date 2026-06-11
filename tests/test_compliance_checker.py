@@ -21,6 +21,8 @@ from backend.app.services.compliance_checker import (
     ExtractionResult,
     ComplianceResult,
     check_compliance,
+    _normalize_gws_header,
+    _normalize_gws_body,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures" / "extraction"
@@ -390,6 +392,73 @@ def test_spirits_low_confidence_proof_mismatch_is_warning():
     assert "R-DS-03" not in {i.rule_id for i in r.errors}, (
         "Low-confidence proof mismatch must NOT be an error"
     )
+
+
+# ---------------------------------------------------------------------------
+# _normalize_gws_header / _normalize_gws_body unit tests
+# ---------------------------------------------------------------------------
+
+def test_normalize_gws_header_strips_space_before_colon():
+    """
+    Regression for Ron Ron: model reads "GOVERNMENT WARNING :" (space before
+    colon). _normalize_gws_header must strip the space so it matches the
+    canonical "GOVERNMENT WARNING:".
+    """
+    assert _normalize_gws_header("GOVERNMENT WARNING :") == "GOVERNMENT WARNING:"
+    assert _normalize_gws_header("GOVERNMENT WARNING:") == "GOVERNMENT WARNING:"  # canonical unchanged
+
+
+def test_normalize_gws_body_joins_hyphenated_line_breaks():
+    """
+    Regression for Glenfiddich: narrow-column label text wraps with hyphens.
+    The model reads 'BE- CAUSE' instead of 'BECAUSE', etc.
+    _normalize_gws_body must join hyphen-space sequences.
+    """
+    raw = (
+        "(1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES "
+        "DURING PREGNANCY BE- CAUSE OF THE RISK OF BIRTH DEFECTS.(2) CON- SUMPTION OF "
+        "ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MA- CHINERY, "
+        "AND MAY CAUSE HEALTH PROBLEMS."
+    )
+    normalized = _normalize_gws_body(raw).upper()
+    assert "BE- CAUSE" not in normalized
+    assert "BECAUSE" in normalized
+    assert "CON- SUMPTION" not in normalized
+    assert "CONSUMPTION" in normalized
+    assert "MA- CHINERY" not in normalized
+    assert "MACHINERY" in normalized
+
+
+def test_normalize_gws_body_adds_space_between_period_and_paren():
+    """
+    Regression for Glenfiddich: model reads 'BIRTH DEFECTS.(2) Consumption'
+    without a space between the period and the opening parenthesis.
+    _normalize_gws_body must insert a space so it aligns with the canonical
+    'BIRTH DEFECTS. (2) Consumption'.
+    """
+    raw = (
+        "(1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES "
+        "DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS.(2) CONSUMPTION OF "
+        "ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, "
+        "AND MAY CAUSE HEALTH PROBLEMS."
+    )
+    normalized = _normalize_gws_body(raw)
+    assert "DEFECTS. (2)" in normalized
+
+
+def test_normalize_gws_body_glenfiddich_full_text_matches_canonical():
+    """
+    Integration: the complete Glenfiddich body extracted text (with hyphens and
+    missing period-paren space) normalizes to match the canonical GWS body.
+    """
+    from backend.app.services.compliance_checker import GWS_CANONICAL_BODY
+    extracted = (
+        "(1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES "
+        "DURING PREGNANCY BE- CAUSE OF THE RISK OF BIRTH DEFECTS.(2) CON- SUMPTION OF "
+        "ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MA- CHINERY, "
+        "AND MAY CAUSE HEALTH PROBLEMS."
+    )
+    assert _normalize_gws_body(extracted).upper() == _normalize_gws_body(GWS_CANONICAL_BODY).upper()
 
 
 def test_gws_present_true_no_text_r_gw_01_warning():
