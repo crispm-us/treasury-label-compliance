@@ -196,6 +196,82 @@ def test_success_with_no_fallback():
 
 
 # ---------------------------------------------------------------------------
+# Two-panel: token summation and partial-usage on back-panel failure
+# ---------------------------------------------------------------------------
+
+def test_two_panel_tokens_are_summed():
+    """
+    Two-panel extraction makes two _extract_single calls.
+    The returned usage must be the sum of both calls' token counts.
+    """
+    FRONT_IN, FRONT_OUT = 200, 80
+    BACK_IN,  BACK_OUT  = 150, 60
+
+    call_count = 0
+
+    def mock_single(img_bytes, media_type, panel_hint, model):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:   # front
+            return (_fixture_dict("beer_compliant.json"), None, FRONT_IN, FRONT_OUT)
+        else:                  # back
+            return (_fixture_dict("beer_compliant.json"), None, BACK_IN, BACK_OUT)
+
+    with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
+        result, error, _, usage = extract(
+            front_bytes=_JPEG,
+            front_media_type="image/jpeg",
+            back_bytes=_JPEG,
+            back_media_type="image/jpeg",
+            model="test-model",
+            fallback_models=[],
+        )
+
+    assert error is None
+    assert result is not None
+    assert call_count == 2
+    assert usage is not None
+    assert usage["input_tokens"]  == FRONT_IN  + BACK_IN
+    assert usage["output_tokens"] == FRONT_OUT + BACK_OUT
+
+
+def test_back_panel_failure_returns_partial_usage():
+    """
+    When the front panel succeeds but the back panel fails, the front panel's
+    tokens were already billed.  extract() must return them in usage rather
+    than None, so the audit log reflects actual spend.
+    """
+    FRONT_IN, FRONT_OUT = 200, 80
+
+    call_count = 0
+
+    def mock_single(img_bytes, media_type, panel_hint, model):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:   # front succeeds
+            return (_fixture_dict("beer_compliant.json"), None, FRONT_IN, FRONT_OUT)
+        else:                  # back fails
+            return (None, ExtractionError(status_code=429, message="rate limited"), 0, 0)
+
+    with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
+        result, error, _, usage = extract(
+            front_bytes=_JPEG,
+            front_media_type="image/jpeg",
+            back_bytes=_JPEG,
+            back_media_type="image/jpeg",
+            model="test-model",
+            fallback_models=[],
+        )
+
+    assert result is None
+    assert error is not None
+    assert error.status_code == 429
+    assert usage is not None, "front tokens must not be discarded on back-panel failure"
+    assert usage["input_tokens"]  == FRONT_IN
+    assert usage["output_tokens"] == FRONT_OUT
+
+
+# ---------------------------------------------------------------------------
 # Non-dict JSON response (e.g. model returns JSON null or array)
 # ---------------------------------------------------------------------------
 
