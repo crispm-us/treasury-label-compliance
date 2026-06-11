@@ -115,6 +115,18 @@ When a label is submitted as two images (front and back), each is processed inde
 
 This strategy tolerates flipped images naturally: if the front and back labels are submitted in the wrong order, fields that happen to appear on the "wrong" panel are still extracted and merged correctly.
 
+### Tie-break policy: same confidence, both panels non-null, different values
+
+The rules above leave one case under-specified: both panels return non-null values at the same confidence level for the same field, but the values differ. The front panel's value is used. This is intentional.
+
+Three alternatives were considered and rejected:
+
+**Numeric confidence sub-score.** Add a `score: float` to `FieldValue`, prompt the model to emit it, and use it to break ties. Rejected because the current schema has no sub-score and adding one requires prompt changes, schema versioning, and tolerance for models that omit or fabricate the value. The benefit is marginal: the tie-break case is rare (see below), and a numeric score only helps if the model's self-reported certainty is well-calibrated — which is empirically unverified.
+
+**Field-panel preference (prefer back for GWS, front for brand name, etc.).** Hard-code a map of field names to preferred source panels and use it as a tiebreaker. Rejected because it violates the panel-order-agnostic design principle: the merge is explicitly designed to be correct regardless of submission order. A layout-preference map encodes assumptions about label structure that do not hold universally (e.g., some spirits carry the GWS on the front label; some brands mirror it on both panels). It would also require tracking each `FieldValue`'s panel of origin through the merge, which the current data model does not support.
+
+**Why the case is rare in practice.** Same-confidence, both-non-null, different-value disagreements only occur when a field genuinely appears on both panels with legible but conflicting text — brand name stated differently on front and back, for example. Well-formed labels do not do this. When it does occur, it is itself a signal that the label may be defective and warrants human review regardless of which value the system selects. Front-wins is therefore the simplest, most predictable behavior; the choice of which value to propagate is secondary to the flag that a conflict exists.
+
 ---
 
 ## Checker Behaviour for Deferred / Always-Warning Rules
@@ -135,7 +147,7 @@ When some fields have `confidence == "not_found"` (generating warnings) and at l
 
 **This is a known limitation.** The NONCOMPLIANT verdict is technically correct — the violation exists. However, a submitter who fixes only the reported violation may not realise the label could not be fully verified, because mandatory fields on an unsubmitted panel are flagged only as warnings.
 
-**Production design note (deferred):** the API response should include a top-level `partial_verification: true` flag whenever NONCOMPLIANT co-exists with one or more `not_found` warnings, so the UI can display: "Violation found AND some fields could not be verified — submit a complete label image to confirm all mandatory fields."
+**Implemented:** the API response includes a top-level `partial_verification: true` flag whenever `NONCOMPLIANT` co-exists with one or more issues where `not_found=True`, so callers can surface: "Violation found AND some fields could not be verified — submit a complete label image to confirm all mandatory fields."
 
 The documented fixture for this case is `tests/fixtures/extraction/spirits_partial_noncompliant.json`.
 
