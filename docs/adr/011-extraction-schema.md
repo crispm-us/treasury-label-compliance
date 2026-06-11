@@ -16,7 +16,7 @@ ADR-009 sketched an extraction schema for Layer 1 (the AI vision model). After w
 
 `schema_version: "1.0"`
 
-The `schema_version` field is required in every extraction result. The checker rejects documents whose version it does not recognize. Breaking changes (new mandatory fields, changed confidence semantics) require a version bump.
+The `schema_version` field is required in every extraction result. Breaking changes (new mandatory fields, changed confidence semantics) require a version bump. **Production note:** the current prototype accepts any `schema_version` value without validation — `ExtractionResult.from_dict` does not reject unknown versions. A production implementation should raise on unrecognized versions to detect prompt/schema drift. See `IMPLEMENTATION_STATUS.md` §Schema version gate.
 
 ---
 

@@ -74,7 +74,7 @@ LiteLLM is the provider abstraction layer (`extractor.py` uses `litellm.completi
 - Magic-byte check is a necessary but not sufficient guard against corrupt uploads: a file with a valid header but a truncated or corrupt body passes validation and will produce an `ERROR` verdict from Layer 1. For production, the recommended addition is a minimum file size threshold (e.g. 4 KB — no real label at any useful resolution is smaller) plus optionally `Pillow.Image.verify()` for full structural validation. `Pillow` is not a current dependency; adding it is the production upgrade path.
 
 ### Test suite
-- 47 tests, 0 failures on Python 3.14
+- 49 tests, 0 failures on Python 3.14
 - All extraction mocked — no API key required, no network calls
 - Coverage: all verdict paths, all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401 no-retry, 400 no-retry, all-fallbacks-exhausted), non-dict JSON guard in `_extract_single`, upload size limit (413), magic-byte MIME validation (415), `image/jpg` alias, API key auth, token usage fields in response, partial verification flag, two-panel readable merge, empty-string and whitespace-only mandatory field bypass
 

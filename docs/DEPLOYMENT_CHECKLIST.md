@@ -6,24 +6,27 @@ Pre-flight steps before making the repository public and deploying to Railway.
 
 ## 1. Repository hygiene (must complete on Zulu before public push)
 
-- [ ] **Delete internal dev notes:** `git rm docs/dev-environment-notes.md`
-  Contains Tailscale hostnames and internal infrastructure details — must not be public.
+- [x] **Delete internal dev notes:** `git rm docs/dev-environment-notes.md`
+  ✓ Done — file removed; confirmed clean via `git ls-files docs/`.
 
 - [ ] **Review `docs/project-log.md`:**
   This file documents all work sessions in detail and is intended to demonstrate the development process to interviewers. Read through it and decide which entries to include verbatim and which to redact. The file is ready to sanitize but has not been changed yet.
 
-- [ ] **Verify `.gitignore` covers all sensitive paths:**
-  Confirm `audit_logs/`, `.env`, `.env.*` are in `.gitignore` and that no `.env` file or audit log was accidentally committed (`git log --all --full-history -- 'audit_logs/*' '.env'`).
+- [x] **Verify `.gitignore` covers all sensitive paths:**
+  ✓ Done — `audit_logs/`, `.env`, `.env.*` confirmed in `.gitignore`; `uv.lock` uncommented and committed.
 
-- [ ] **Commit the `uv.lock` file** for reproducible installs (`uv lock` if not already present).
+- [x] **Commit the `uv.lock` file** for reproducible installs.
+  ✓ Done — `uv.lock` committed; `.gitignore` entry uncommented.
 
 ---
 
 ## 2. Documentation (complete before public push)
 
-- [ ] **Root `README.md`** — project overview, quick-start instructions, API reference summary, link to ADRs.
-- [ ] **`IMPLEMENTATION_STATUS.md`** — maps each ADR to what is built vs. deferred, so reviewers can assess scope honestly.
-- [ ] **`LICENSE`** — choose a license (MIT is appropriate for an interview demo).
+- [x] **Root `README.md`** — project overview, quick-start, API reference, configuration table, limitations, smoke-test link.
+- [x] **`IMPLEMENTATION_STATUS.md`** — maps each ADR to what is built vs. deferred.
+- [x] **`LICENSE`** — MIT license present.
+
+**Before each public push:** verify README test count and limitations section match current code. `IMPLEMENTATION_STATUS.md` is the authoritative scope reference; README limitations should not contradict it.
 
 ---
 
