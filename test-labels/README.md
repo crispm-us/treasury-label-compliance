@@ -110,9 +110,17 @@ Each synthetic label embeds a notice in red/grey text on the back panel identify
 
 ## Real label pairs
 
-Photographs of actual commercial labels. Named `{product-slug}-{panel}.jpg` for real labels and `{product-slug}-synth-{panel}.jpg` (or `{product-slug}-synth-{rule}-{panel}.jpg`) for synthetic labels. All live in `beer/` or `wine/` alongside the synthetic fixtures.
+Photographs of actual commercial labels. Named `{product-slug}-{panel}.jpg` for real labels and `{product-slug}-synth-{panel}.jpg` (or `{product-slug}-synth-{rule}-{panel}.jpg`) for synthetic labels. Real labels live alongside the synthetic fixtures in their respective beverage-class directories.
 
 For multi-panel submission guidance and expected verdicts, see [`docs/DEPLOYMENT_CHECKLIST.md §6`](../docs/DEPLOYMENT_CHECKLIST.md).
+
+### Spirits
+
+| Product | Front | Back | Notes |
+|---|---|---|---|
+| Jack Daniel's Old No. 7 (domestic TN) | `spirits/jack-daniels-old-no-7-front.jpg` | `spirits/jack-daniels-old-no-7-back.jpg` | 200 ml miniature (front) / 750 ml (back) — two different bottle sizes photographed; no GWS visible on either panel |
+| Glenfiddich 12 Year Old (imported UK/Scotch) | `spirits/glenfiddich-12-front.jpg` | `spirits/glenfiddich-12-back.jpg` | |
+| Glenlivet 12 Year Old (imported UK/Scotch) | `spirits/glenlivet-12-front.jpg` | `spirits/glenlivet-12-back.jpg` | |
 
 ### Beer
 

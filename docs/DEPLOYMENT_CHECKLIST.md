@@ -96,6 +96,14 @@ Synthetic labels are sufficient for demonstrating the architecture, but real lab
 
 ### Available real label pairs
 
+#### Spirits
+
+| Product | Front | Back | Notes |
+|---|---|---|---|
+| Jack Daniel's Old No. 7 (domestic TN) | `spirits/jack-daniels-old-no-7-front.jpg` | `spirits/jack-daniels-old-no-7-back.jpg` | 200 ml miniature (front) / 750 ml (back) — different sizes photographed; no GWS visible on either panel |
+| Glenfiddich 12 Year Old (imported UK/Scotch) | `spirits/glenfiddich-12-front.jpg` | `spirits/glenfiddich-12-back.jpg` | |
+| Glenlivet 12 Year Old (imported UK/Scotch) | `spirits/glenlivet-12-front.jpg` | `spirits/glenlivet-12-back.jpg` | |
+
 #### Beer
 
 | Product | Front | Back/GWS | Notes |
@@ -128,6 +136,9 @@ For each product below, the "front-only" submission is the **failure case** — 
 
 | Product | Front-only expected | Front+back expected | Notes |
 |---|---|---|---|
+| Jack Daniel's Old No. 7 | NONCOMPLIANT (GWS not on front panel) | NONCOMPLIANT (GWS absent both panels) | ⚠ No GWS visible in either photo — may require a third shot |
+| Glenfiddich 12 | NONCOMPLIANT (GWS not on front panel) | unverified* | Scotch import; GWS placement unknown |
+| Glenlivet 12 | NONCOMPLIANT (GWS not on front panel) | unverified* | Scotch import; GWS placement unknown |
 | Henninger Lager | UNVERIFIABLE (GWS on separate GWS face) | — (use front + gws face) | ✓ smoke tested |
 | Stiegl Radler | NONCOMPLIANT (GWS absent front) | UNVERIFIABLE (ABV absent on both panels) | ✓ smoke tested |
 | Budweiser | NONCOMPLIANT (GWS absent front) | unverified* | GWS on side/back panel |
@@ -148,7 +159,8 @@ For each product below, the "front-only" submission is the **failure case** — 
 - [ ] Run Henninger front + GWS smoke test; document result in `docs/project-log.md`
 - [ ] Run Stiegl two-panel smoke test; document result
 - [ ] Run all `unverified*` rows through `smoke-test.sh`; update table with confirmed verdicts
-- [ ] Acquire and test a spirits bottle — front + back panels
+- [ ] Run spirits real-label smoke tests (Jack Daniel's, Glenfiddich, Glenlivet); document results in `docs/project-log.md`
+- [ ] Photograph GWS panel for Jack Daniel's — neither current image captures it
 
 ---
 

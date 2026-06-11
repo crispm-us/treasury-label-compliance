@@ -205,6 +205,31 @@ check "Ron Ron Sauvignon real front+back → 200 (NONCOMPLIANT expected — R-GW
     -F "front=@test-labels/wine/ron-ron-sauvignon-front.jpg" \
     -F "back=@test-labels/wine/ron-ron-sauvignon-back.jpg"
 
+# Spirits real labels.
+# Jack Daniel's: GWS not visible in either photo — expect NONCOMPLIANT on both submissions.
+check "Jack Daniel's Old No. 7 real front only → 200 (NONCOMPLIANT expected — no GWS on front)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/spirits/jack-daniels-old-no-7-front.jpg"
+
+check "Jack Daniel's Old No. 7 real front+back → 200 (NONCOMPLIANT expected — GWS absent both panels)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/spirits/jack-daniels-old-no-7-front.jpg" \
+    -F "back=@test-labels/spirits/jack-daniels-old-no-7-back.jpg"
+
+check "Glenfiddich 12 real front+back → 200 (Scotch import; verdict unverified)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/spirits/glenfiddich-12-front.jpg" \
+    -F "back=@test-labels/spirits/glenfiddich-12-back.jpg"
+
+check "Glenlivet 12 real front+back → 200 (Scotch import; verdict unverified)" \
+    200 - \
+    -X POST "${BASE_URL}/v1/check" \
+    -F "front=@test-labels/spirits/glenlivet-12-front.jpg" \
+    -F "back=@test-labels/spirits/glenlivet-12-back.jpg"
+
 if [[ -n "$API_KEY" ]]; then
     # Send no key intentionally — expects 401
     response=$(curl -s \
