@@ -24,6 +24,7 @@ from backend.app.services.compliance_checker import (
     check_compliance,
     _normalize_gws_header,
     _normalize_gws_body,
+    _parse_abv_from_text,
     _strip_gws_header_prefix,
 )
 
@@ -566,3 +567,78 @@ def test_gws_present_string_false_treated_as_absent():
         'gws_present="false" (string) at high confidence must fire R-GW-01 error'
     )
     assert r.verdict == "NONCOMPLIANT"
+
+
+# ---------------------------------------------------------------------------
+# R-META-02: ABV text/numeric cross-validation
+# ---------------------------------------------------------------------------
+
+def test_parse_abv_from_text_common_formats():
+    """_parse_abv_from_text must handle the most common label ABV string formats."""
+    assert _parse_abv_from_text("8% ALC. BY VOL.") == 8.0
+    assert _parse_abv_from_text("45% Alc/Vol") == 45.0
+    assert _parse_abv_from_text("ALC. 5.2% VOL.") == 5.2
+    assert _parse_abv_from_text("2.5%") == 2.5
+    assert _parse_abv_from_text("no percentage here") is None
+
+
+def test_abv_cross_validation_mismatch_fires_warning():
+    """
+    R-META-02: abv_pct and abv_text are both high confidence but disagree.
+    Observed real-world case: Mike's Harder, where the model extracted
+    abv_pct=5.0 while abv_text correctly read "8% ALC. BY VOL.".
+    Must fire R-META-02 warning.
+    """
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["abv_pct"]  = {"value": 5.0,               "confidence": "high"}
+    data["fields"]["abv_text"] = {"value": "8% ALC. BY VOL.", "confidence": "high"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    warning_rules = {i.rule_id for i in r.warnings}
+    assert "R-META-02" in warning_rules, (
+        "abv_pct=5.0 vs abv_text='8%' must fire R-META-02 warning"
+    )
+
+
+def test_abv_cross_validation_matching_values_no_warning():
+    """
+    R-META-02 must NOT fire when abv_pct and abv_text agree (within 0.2%)."""
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["abv_pct"]  = {"value": 8.0,               "confidence": "high"}
+    data["fields"]["abv_text"] = {"value": "8% ALC. BY VOL.", "confidence": "high"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    assert all(i.rule_id != "R-META-02" for i in r.issues), (
+        "Matching abv_pct and abv_text must not fire R-META-02"
+    )
+
+
+def test_abv_cross_validation_tolerance():
+    """Within 0.2% tolerance must not fire (e.g. 5.2% abv_pct vs '5.3%' text)."""
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["abv_pct"]  = {"value": 5.2,    "confidence": "high"}
+    data["fields"]["abv_text"] = {"value": "5.3%", "confidence": "high"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    assert all(i.rule_id != "R-META-02" for i in r.issues)
+
+
+def test_abv_cross_validation_skipped_when_abv_text_not_found():
+    """R-META-02 must not fire when abv_text is not_found (nothing to compare)."""
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["abv_pct"]  = {"value": 5.0,  "confidence": "high"}
+    data["fields"]["abv_text"] = {"value": None, "confidence": "not_found"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    assert all(i.rule_id != "R-META-02" for i in r.issues)
+
+
+def test_abv_cross_validation_unparseable_text_fires_warning():
+    """
+    If abv_text is present but contains no parseable percentage, R-META-02
+    fires a warning that the text field could not be used for cross-validation.
+    """
+    data = json.loads((FIXTURES / "beer_compliant.json").read_text())
+    data["fields"]["abv_pct"]  = {"value": 5.0,           "confidence": "high"}
+    data["fields"]["abv_text"] = {"value": "ALC BY VOL.",  "confidence": "high"}
+    r = check_compliance(ExtractionResult.from_dict(data))
+    warning_rules = {i.rule_id for i in r.warnings}
+    assert "R-META-02" in warning_rules, (
+        "abv_text with no parseable % value must fire R-META-02 warning"
+    )

@@ -73,10 +73,26 @@ LiteLLM is the provider abstraction layer (`extractor.py` uses `litellm.completi
 - Sniffed MIME type used for the LiteLLM data URI, not the client-declared type — a client sending PNG bytes with `Content-Type: image/jpeg` is handled correctly
 - Magic-byte check is a necessary but not sufficient guard against corrupt uploads: a file with a valid header but a truncated or corrupt body passes validation and will produce an `ERROR` verdict from Layer 1. For production, the recommended addition is a minimum file size threshold (e.g. 4 KB — no real label at any useful resolution is smaller) plus optionally `Pillow.Image.verify()` for full structural validation. `Pillow` is not a current dependency; adding it is the production upgrade path.
 
+### Extraction schema (ADR-011) — receipt fields and schema violation tracking
+
+Receipt fields added to API response and audit log (FR-07):
+- `front_filename` / `back_filename`: original client-supplied filename
+- `front_label_ref` / `back_label_ref`: `{stem}-{YYYYMMDDTHHmmss}Z` — human-readable unique reference correlating the submission to the audit log entry without a database
+- `front_sha256` / `back_sha256`: SHA-256 hex of received image bytes (pre-EXIF-rotation), providing a content-addressable receipt the caller can verify
+
+Schema violation tracking (see ADR-011 §Layer 1 Schema Violations):
+- Non-dict field values from the model are recorded in `schema_violations` (list in audit log, count in API response)
+- `EXTRACTION_SCHEMA_STRICT=true` env flag treats violations as ExtractionError (default: false — violations are logged but extraction proceeds)
+- Single-panel path now has the same isinstance guard as the two-panel merge path via `_sanitize_fields()`
+
+### ABV cross-validation (R-META-02)
+
+New cross-field rule applied after all beverage-class checks: if `abv_pct` and `abv_text` are both present with usable confidence, the numeric value parsed from `abv_text` is compared with `abv_pct`. A discrepancy > 0.2% fires R-META-02 at warning severity. Motivated by Mike's Harder hallucination: `abv_pct=5.0` at high confidence while `abv_text="8% ALC. BY VOL."` correctly read 8%.
+
 ### Test suite
-- 61 tests, 0 failures on Python 3.10
+- 88 tests, 0 failures on Python 3.14 (uv run --with pytest pytest)
 - All extraction mocked — no API key required, no network calls
-- Coverage: all verdict paths, all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401 no-retry, 400 no-retry, all-fallbacks-exhausted), non-dict JSON guard in `_extract_single`, empty-choices and null-content crash guard in `_extract_single`, invalid confidence string rejection, `not_found`-with-non-null-value rejection, low-confidence ABV range check (R-DS-03, R-WN-03), R-GW-02 case-insensitive body check (all-caps real-label pass), R-GW-02 at high confidence (→ NONCOMPLIANT error), proof mismatch at low confidence (→ R-DS-03 warning, not error), R-WN-08 empty-string appellation bypass (same guard as mandatory field bypass), R-META-01 null beverage class (→ UNVERIFIABLE), `gws_present=true` with no extractable text (→ single R-GW-01 not_found warning; R-GW-02/03 suppressed), upload size limit (413), magic-byte MIME validation (415), `image/jpg` alias, API key auth, token usage fields in response, partial verification flag, two-panel token summation, two-panel readable merge, empty-string and whitespace-only mandatory field bypass
+- Coverage: all verdict paths, all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401 no-retry, 400 no-retry, all-fallbacks-exhausted), non-dict JSON guard in `_extract_single`, empty-choices and null-content crash guard in `_extract_single`, invalid confidence string rejection, `not_found`-with-non-null-value rejection, low-confidence ABV range check (R-DS-03, R-WN-03), R-GW-02 case-insensitive body check (all-caps real-label pass), R-GW-02 at high confidence (→ NONCOMPLIANT error), proof mismatch at low confidence (→ R-DS-03 warning, not error), R-WN-08 empty-string appellation bypass (same guard as mandatory field bypass), R-META-01 null beverage class (→ UNVERIFIABLE), `gws_present=true` with no extractable text (→ single R-GW-01 not_found warning; R-GW-02/03 suppressed), upload size limit (413), magic-byte MIME validation (415), `image/jpg` alias, API key auth, token usage fields in response, partial verification flag, two-panel token summation, two-panel readable merge, empty-string and whitespace-only mandatory field bypass, receipt fields (label_ref format, sha256 value, back=None), schema_violations count, R-META-02 ABV cross-validation (mismatch, match, tolerance, not_found skip, unparseable text)
 
 ---
 
@@ -100,7 +116,9 @@ The extractor implements sequential provider-switching fallback: on a retryable 
 ### Image preprocessing pipeline (ADR-008)
 **ADR reference:** ADR-008
 
-Not implemented: orientation correction (EXIF), resolution normalization, contrast enhancement for low-quality scans. See the Upload validation section above for what is implemented and for the minimum-file-size / Pillow production upgrade path.
+Implemented: EXIF rotation correction via `ImageOps.exif_transpose()` — critical for phone photos where orientation is stored in metadata rather than pixel data (root cause of failures on Glenfiddich, Ron Ron, Mike's Harder).
+
+Not implemented: resolution normalization, contrast enhancement for low-quality scans. See the Upload validation section above for the minimum-file-size / Pillow production upgrade path.
 
 ### Frontend (ADR-005)
 **ADR reference:** ADR-005
@@ -116,6 +134,19 @@ ADR-007 documents a batch endpoint for processing multiple labels in a single re
 **ADR reference:** ADR-011 §Schema evolution
 
 `ExtractionResult.from_dict` accepts any `schema_version` value without validation. A production implementation should reject or flag results with an unexpected schema version to catch model prompt / schema drift.
+
+### Human review queue for NONCOMPLIANT and UNVERIFIABLE verdicts
+
+A production deployment should route NONCOMPLIANT and UNVERIFIABLE verdicts to a human review queue rather than treating them as final. Two known failure modes make this mandatory:
+
+- **R-GW-03 false positives from OCR**: The colon at the end of `GOVERNMENT WARNING:` is occasionally misread or missed by the model. The normalization in `_normalize_gws_header()` corrects a space-before-colon artifact, but other OCR errors on the colon (missing entirely, replaced with period, etc.) would produce a NONCOMPLIANT verdict on a physically compliant label. Physical inspection is the only resolution path.
+- **Model hallucination on rotated images**: On a 90°-rotated GWS, the model may hallucinate plausible-sounding but incorrect body text (observed on Glenlivet: `"Must be 21+ to purchase"`). This produces NONCOMPLIANT or UNVERIFIABLE depending on confidence.
+
+The `schema_violations` count in the API response provides an additional triage signal: any verdict with `schema_violations > 0` is lower confidence than one with zero violations.
+
+### GWS normalization complexity risk
+
+The `_normalize_gws_body()` function applies seven normalizations (see ADR-011 §GWS Normalization Policy). Each is justified by a specific observed OCR artifact, and each is applied symmetrically to both extracted and canonical text. The risk: if enough normalizations accumulate, a substantively non-compliant body could be accepted because multiple independent normalizations collectively bridge the gap. Monitor: each new normalization added to the function must include a proof (and test) that the canonical text is unchanged by it.
 
 ### Unicode normalization for GWS verbatim check
 Comparison of extracted GWS text against the canonical body (27 CFR §16.21) uses whitespace normalization only. A production version should also normalize Unicode (e.g. smart quotes → straight quotes, em-dashes → hyphens, zero-width spaces, ligatures) before comparison, since model transcription can introduce these. This is a **deterministic text-processing problem**: `unicodedata.normalize("NFKC", text)` plus an explicit character map would be sufficient. It is deferred because real printed labels use standard ASCII in practice, making this a low-probability edge case for the prototype.

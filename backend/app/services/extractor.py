@@ -38,7 +38,7 @@ from typing import Any
 
 import litellm
 
-from backend.app.config import EXTRACTION_FALLBACK_MODELS, EXTRACTION_MODEL, MODEL_TIMEOUT_SECONDS
+from backend.app.config import EXTRACTION_FALLBACK_MODELS, EXTRACTION_MODEL, EXTRACTION_SCHEMA_STRICT, MODEL_TIMEOUT_SECONDS
 from backend.app.services.compliance_checker import ExtractionResult
 
 # Suppress LiteLLM's verbose success logging; keep errors.
@@ -150,6 +150,62 @@ class ExtractionError:
 
 # Errors where retrying — even with a different provider — will not help.
 _NO_RETRY_STATUS_CODES: frozenset[int] = frozenset({400, 401})
+
+# ---------------------------------------------------------------------------
+# Schema violation tracking
+# ---------------------------------------------------------------------------
+
+_not_found_field: dict = {"value": None, "confidence": "not_found"}
+
+
+def _collect_schema_violations(fields_dict: dict, model: str) -> list[dict]:
+    """
+    Scan raw extraction fields for non-dict values (Layer 1 schema violations).
+
+    The extraction prompt specifies every field must be a
+    {"value": ..., "confidence": ...} object.  A model returning a bare
+    primitive (null, bool, string, number) instead of a field object has
+    violated the schema.
+
+    These are surfaced as quality metrics in the audit log and API response.
+    They do not cause hard failures in loose mode (default).
+    Set EXTRACTION_SCHEMA_STRICT=true to treat them as ExtractionErrors.
+    """
+    violations: list[dict] = []
+    if not isinstance(fields_dict, dict):
+        return violations
+    for fname, fval in fields_dict.items():
+        if not isinstance(fval, dict):
+            violations.append({
+                "field": fname,
+                "type_got": type(fval).__name__,
+                "value_preview": repr(fval)[:80],
+                "model": model,
+            })
+    return violations
+
+
+def _sanitize_fields(raw_dict: dict) -> dict:
+    """
+    Convert non-dict field values to not_found before ExtractionResult.from_dict.
+
+    Guards the single-panel path (where _merge_panels is not called).
+    _merge_panels has its own equivalent guard for defense-in-depth.
+    Non-dict values that reach from_dict would raise TypeError; this
+    converts them to _not_found so loose mode can still produce a result.
+    """
+    if not isinstance(raw_dict, dict):
+        return raw_dict
+    fields = raw_dict.get("fields")
+    if not isinstance(fields, dict):
+        return raw_dict
+    sanitized = dict(raw_dict)
+    sanitized["fields"] = {
+        k: (v if isinstance(v, dict) else _not_found_field)
+        for k, v in fields.items()
+    }
+    return sanitized
+
 
 # ---------------------------------------------------------------------------
 # Panel merger
@@ -350,18 +406,22 @@ def extract(
     back_media_type: str | None = None,
     model: str | None = None,
     fallback_models: list[str] | None = None,
-) -> tuple[ExtractionResult | None, ExtractionError | None, float, dict | None]:
+) -> tuple[ExtractionResult | None, ExtractionError | None, float, dict | None, list[dict]]:
     """
     Run Layer 1 extraction on one or two panel images.
 
     Tries `model` first; on retryable errors iterates through `fallback_models`
     in order.  Auth errors (401) and bad-request errors (400) are not retried.
 
-    Returns (result, error, duration_ms, usage).
+    Returns (result, error, duration_ms, usage, schema_violations).
     Exactly one of result/error will be non-None.
     duration_ms covers total wall-clock time across all API calls.
     usage is {"input_tokens": int, "output_tokens": int}, accumulated across
     all successful panel calls, or None on error.
+    schema_violations is a list of dicts describing non-dict field values
+    returned by the model (Layer 1 prompt non-compliance).  Always [] on error.
+    When EXTRACTION_SCHEMA_STRICT=true and violations are found, an
+    ExtractionError is returned instead of a result.
     """
     model = model or EXTRACTION_MODEL
     fallback_models = fallback_models if fallback_models is not None else EXTRACTION_FALLBACK_MODELS
@@ -387,9 +447,14 @@ def extract(
         front_bytes, front_media_type, "front"
     )
     if err:
-        return None, err, (time.monotonic() - t0) * 1000, None
+        return None, err, (time.monotonic() - t0) * 1000, None, []
 
     total_in, total_out = front_in, front_out
+
+    # Collect schema violations before sanitization (need the raw non-dict values)
+    front_model = front_dict.get("extraction_model", model)
+    all_violations: list[dict] = _collect_schema_violations(front_dict.get("fields", {}), front_model)
+    front_dict = _sanitize_fields(front_dict)  # make single-panel path safe for from_dict
 
     if back_bytes and back_media_type:
         back_dict, err, back_in, back_out = _extract_with_fallback(
@@ -398,9 +463,12 @@ def extract(
         if err:
             # Front tokens were billed; include them in partial usage for audit.
             partial_usage = {"input_tokens": total_in, "output_tokens": total_out}
-            return None, err, (time.monotonic() - t0) * 1000, partial_usage
+            return None, err, (time.monotonic() - t0) * 1000, partial_usage, []
         total_in  += back_in
         total_out += back_out
+        back_model = back_dict.get("extraction_model", model)
+        all_violations += _collect_schema_violations(back_dict.get("fields", {}), back_model)
+        back_dict = _sanitize_fields(back_dict)
         merged = _merge_panels(front_dict, back_dict)
     else:
         merged = front_dict
@@ -408,11 +476,23 @@ def extract(
     duration_ms = (time.monotonic() - t0) * 1000
     usage = {"input_tokens": total_in, "output_tokens": total_out}
 
+    # Strict mode: treat schema violations as an extraction failure
+    if EXTRACTION_SCHEMA_STRICT and all_violations:
+        fields_named = [v["field"] for v in all_violations]
+        return None, ExtractionError(
+            status_code=None,
+            message=(
+                f"Layer 1 schema violations in {len(all_violations)} field(s): {fields_named}. "
+                "Model returned non-dict field values. "
+                "Set EXTRACTION_SCHEMA_STRICT=false to allow partial extraction."
+            ),
+        ), duration_ms, usage, []
+
     try:
         result = ExtractionResult.from_dict(merged)
     except Exception as exc:
         return None, ExtractionError(
             status_code=None, message=f"Schema parse error: {exc}"
-        ), duration_ms, usage
+        ), duration_ms, usage, all_violations
 
-    return result, None, duration_ms, usage
+    return result, None, duration_ms, usage, all_violations

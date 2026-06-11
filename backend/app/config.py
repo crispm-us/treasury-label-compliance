@@ -84,3 +84,13 @@ MODEL_TIMEOUT_SECONDS: float = float(os.getenv("MODEL_TIMEOUT_SECONDS", "30"))
 # ---------------------------------------------------------------------------
 
 API_KEY: str = os.getenv("API_KEY", "")  # empty = no auth required
+
+# ---------------------------------------------------------------------------
+# Layer 1 schema enforcement
+# ---------------------------------------------------------------------------
+
+# When True: any schema violation (non-dict field value from the model) causes
+# an ExtractionError after successful extraction, surfacing the violation as an
+# ERROR verdict.  Default False — violations are logged but extraction proceeds.
+# Set EXTRACTION_SCHEMA_STRICT=true in production to enforce prompt compliance.
+EXTRACTION_SCHEMA_STRICT: bool = os.getenv("EXTRACTION_SCHEMA_STRICT", "false").lower() in {"true", "1", "yes"}

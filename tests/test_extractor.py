@@ -58,7 +58,7 @@ def test_fallback_tried_on_rate_limit():
         return _ok("beer_compliant.json")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _, _usage = extract(
+        result, error, _, _usage, _violations = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="primary-model",
@@ -81,7 +81,7 @@ def test_fallback_tried_on_server_error():
         return _ok("beer_compliant.json")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _, _usage = extract(
+        result, error, _, _usage, _violations = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="primary-model",
@@ -98,7 +98,7 @@ def test_all_fallbacks_exhausted_returns_last_error():
         return _err(429, f"{model} rate limited")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _, _usage = extract(
+        result, error, _, _usage, _violations = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="model-a",
@@ -123,7 +123,7 @@ def test_no_fallback_on_auth_error():
         return _err(401, "invalid key")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _, _usage = extract(
+        result, error, _, _usage, _violations = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="primary-model",
@@ -144,7 +144,7 @@ def test_no_fallback_on_bad_request():
         return _err(400, "bad request")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _, _usage = extract(
+        result, error, _, _usage, _violations = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="primary-model",
@@ -166,7 +166,7 @@ def test_no_fallback_configured_returns_error_on_failure():
         return _err(429, "rate limited")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _, _usage = extract(
+        result, error, _, _usage, _violations = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="only-model",
@@ -183,7 +183,7 @@ def test_success_with_no_fallback():
         return _ok("spirits_compliant.json")
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _, _usage = extract(
+        result, error, _, _usage, _violations = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             model="only-model",
@@ -218,7 +218,7 @@ def test_two_panel_tokens_are_summed():
             return (_fixture_dict("beer_compliant.json"), None, BACK_IN, BACK_OUT)
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _, usage = extract(
+        result, error, _, usage, _violations = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             back_bytes=_JPEG,
@@ -254,7 +254,7 @@ def test_back_panel_failure_returns_partial_usage():
             return (None, ExtractionError(status_code=429, message="rate limited"), 0, 0)
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
-        result, error, _, usage = extract(
+        result, error, _, usage, _violations = extract(
             front_bytes=_JPEG,
             front_media_type="image/jpeg",
             back_bytes=_JPEG,

@@ -15,10 +15,12 @@ Docs (auto-generated):
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import secrets
 import uuid
 from datetime import datetime, timezone
 from io import BytesIO
+from pathlib import Path
 from typing import Annotated
 
 from PIL import Image, ImageOps
@@ -106,6 +108,23 @@ def _apply_exif_rotation(data: bytes, media_type: str) -> tuple[bytes, str]:
         return data, media_type              # Fallback: send original to model
 
 
+def _make_label_ref(filename: str | None, ts_compact: str) -> str | None:
+    """
+    Construct a human-readable unique reference for an uploaded label image.
+
+    Format: {stem}-{YYYYMMDDTHHmmss}Z  (e.g. IMG_091-20260611T143022Z)
+
+    The stem preserves the user's original filename for manual correlation;
+    the compact UTC timestamp makes the reference unique to the second.
+    Both components appear in the audit log entry (front_label_ref / back_label_ref),
+    fulfilling FR-07 (receipt data for label submissions).
+    """
+    if not filename:
+        return None
+    stem = Path(filename).stem
+    return f"{stem}-{ts_compact}Z"
+
+
 def _sniff_media_type(data: bytes) -> str | None:
     """Return the MIME type detected from magic bytes, or None if unrecognized."""
     if data[:3] == _JPEG_MAGIC:
@@ -172,6 +191,16 @@ class CheckResponse(BaseModel):
                                  # so the full picture may differ). See ADR-011.
     input_tokens:          int | None   # prompt tokens charged by the model API (None on error)
     output_tokens:         int | None   # completion tokens charged by the model API (None on error)
+    # --- Receipt fields (FR-07) -------------------------------------------
+    # Provide the caller with stable references to correlate the API response
+    # with the audit log entry without a separate database.
+    front_filename:        str | None   # original filename supplied by the client
+    front_label_ref:       str | None   # {stem}-{UTC}Z — human-readable unique reference
+    front_sha256:          str | None   # SHA-256 hex of received bytes (pre-EXIF-rotation)
+    back_filename:         str | None
+    back_label_ref:        str | None
+    back_sha256:           str | None
+    schema_violations:     int          # count of Layer 1 non-dict field values (model prompt non-compliance)
 
 
 # ---------------------------------------------------------------------------
@@ -202,19 +231,28 @@ async def check_label(
     - **request_id**: echoed back for audit log correlation
     """
     request_id = str(uuid.uuid4())
-    timestamp  = datetime.now(timezone.utc).isoformat()
+    now        = datetime.now(timezone.utc)
+    timestamp  = now.isoformat()
+    ts_compact = now.strftime("%Y%m%dT%H%M%S")  # for label_ref: 20260611T143022
 
     # --- Read and validate uploads ----------------------------------------------
     front_bytes, front_media_type = await _read_validated(front, "front")
+    front_sha256   = hashlib.sha256(front_bytes).hexdigest()   # hash pre-rotation bytes (FR-07)
+    front_label_ref = _make_label_ref(front.filename, ts_compact)
     front_bytes, front_media_type = _apply_exif_rotation(front_bytes, front_media_type)
+
     if back:
         back_bytes, back_media_type = await _read_validated(back, "back")
+        back_sha256    = hashlib.sha256(back_bytes).hexdigest()
+        back_label_ref = _make_label_ref(back.filename, ts_compact)
         back_bytes, back_media_type = _apply_exif_rotation(back_bytes, back_media_type)
     else:
         back_bytes, back_media_type = None, None
+        back_sha256    = None
+        back_label_ref = None
 
     # --- Layer 1: extraction ---------------------------------------------------
-    result, model_error, duration_ms, usage = extract(
+    result, model_error, duration_ms, usage, schema_violations = extract(
         front_bytes=front_bytes,
         front_media_type=front_media_type,
         back_bytes=back_bytes,
@@ -255,6 +293,15 @@ async def check_label(
                 {"rule_id": i.rule_id, "severity": i.severity, "field": i.field}
                 for i in compliance.issues
             ],
+            # Receipt fields (FR-07)
+            "front_filename":    front.filename,
+            "front_label_ref":   front_label_ref,
+            "front_sha256":      front_sha256,
+            "back_filename":     back.filename if back else None,
+            "back_label_ref":    back_label_ref,
+            "back_sha256":       back_sha256,
+            # Layer 1 quality metrics
+            "schema_violations": schema_violations,
         })
     except Exception:
         audit_logged_ok = False
@@ -281,6 +328,13 @@ async def check_label(
         partial_verification=partial_verification,
         input_tokens=usage.get("input_tokens")  if usage else None,
         output_tokens=usage.get("output_tokens") if usage else None,
+        front_filename=front.filename,
+        front_label_ref=front_label_ref,
+        front_sha256=front_sha256,
+        back_filename=back.filename if back else None,
+        back_label_ref=back_label_ref,
+        back_sha256=back_sha256,
+        schema_violations=len(schema_violations),
     )
 
 

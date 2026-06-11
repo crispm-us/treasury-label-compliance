@@ -135,6 +135,27 @@ class ComplianceResult:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# ABV cross-validation helper
+# ---------------------------------------------------------------------------
+
+_ABV_PCT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*%")
+
+
+def _parse_abv_from_text(abv_text: str) -> float | None:
+    """
+    Extract the first 'XX.X%' numeric value from an ABV text string.
+
+    Handles common label formats:
+      "8% ALC. BY VOL."  → 8.0
+      "45% Alc/Vol"      → 45.0
+      "ALC. 5.2% VOL."   → 5.2
+    Returns None if no percentage value is found.
+    """
+    m = _ABV_PCT_RE.search(str(abv_text))
+    return float(m.group(1)) if m else None
+
+
 def _normalize(text: str | None) -> str:
     """Collapse all whitespace runs to a single space for text comparison."""
     if not text:
@@ -537,6 +558,57 @@ def _check_wine(f: ExtractionFields, issues: list[Issue]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Cross-field validation — applies to all beverage classes
+# ---------------------------------------------------------------------------
+
+def _check_abv_cross_validation(f: ExtractionFields, issues: list[Issue]) -> None:
+    """
+    R-META-02: Cross-validate abv_pct against the numeric value in abv_text.
+
+    Motivation: the model can hallucinate an internally consistent wrong ABV.
+    Example observed on Mike's Harder: abv_pct=5.0, abv_text="8% ALC. BY VOL."
+    both at high confidence. The range check passes (5% is valid for a beer-type
+    product); only cross-referencing the two fields exposes the contradiction.
+
+    Always fires at warning severity: the mismatch is a quality signal that
+    requires human review to resolve — either field could be the incorrect one.
+    """
+    # Need both fields present with usable values
+    if f.abv_pct.confidence not in ("high", "low") or f.abv_pct.value is None:
+        return
+    if f.abv_text.confidence not in ("high", "low") or f.abv_text.value is None:
+        return
+
+    try:
+        abv_pct_num = float(f.abv_pct.value)
+    except (TypeError, ValueError):
+        return  # Non-numeric abv_pct already flagged by class-specific rule
+
+    abv_text_num = _parse_abv_from_text(str(f.abv_text.value))
+    if abv_text_num is None:
+        issues.append(Issue(
+            rule_id="R-META-02", severity="warning",
+            field="abv_text", found=f.abv_text.value,
+            expected=(
+                "Could not parse a numeric ABV from abv_text for cross-validation "
+                "with abv_pct — expected a value like '8% ALC. BY VOL.'"
+            ),
+        ))
+        return
+
+    if abs(abv_pct_num - abv_text_num) > 0.2:
+        issues.append(Issue(
+            rule_id="R-META-02", severity="warning",
+            field="abv_pct", found=f.abv_pct.value,
+            expected=(
+                f"abv_pct ({abv_pct_num}%) does not match the value parsed from "
+                f"abv_text ({abv_text_num}% from '{f.abv_text.value}'). "
+                "One value may be a hallucination — verify on physical label."
+            ),
+        ))
+
+
+# ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
 
@@ -581,6 +653,9 @@ def check_compliance(result: ExtractionResult) -> ComplianceResult:
             field="beverage_class", found=result.beverage_class,
             expected="beverage_class must be 'beer', 'spirits', or 'wine' to apply class-specific rules",
         ))
+
+    # Cross-field validation — applies regardless of beverage class
+    _check_abv_cross_validation(f, issues)
 
     if any(i.severity == "error" for i in issues):
         verdict: Verdict = "NONCOMPLIANT"

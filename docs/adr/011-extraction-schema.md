@@ -182,6 +182,54 @@ The documented fixture for this case is `tests/fixtures/extraction/spirits_parti
 
 ---
 
+## GWS Normalization Policy
+
+The compliance checker normalizes both extracted and canonical GWS text before verbatim comparison (R-GW-02, R-GW-03). This section is the normative record of each normalization currently applied, its motivating OCR artifact, and the governing principle.
+
+### Governing principle
+
+Each normalization must be justified by a specific, observed OCR artifact on real label images. Normalizations must be applied symmetrically to both the extracted text and the canonical constant — they can never be applied one-sidedly to accept text that would otherwise fail. When an artifact is first observed, it is added to this list before the normalization is written. Speculative normalizations are not permitted.
+
+**Known risk:** normalizations accumulate over time. As of v1 there are seven; each is individually defensible. Cumulatively they could accept GWS text that is substantively wrong if multiple normalizations combine to bridge the gap between a non-compliant and a compliant reading. Monitor for this: each new normalization must include a proof that the canonical text is unaffected by it (i.e., that applying the normalization to the canonical text produces the same string).
+
+### Current normalizations
+
+All applied by `_normalize_gws_body()` (body) or `_normalize_gws_header()` (header), in order:
+
+| # | Function | Transformation | Motivating artifact |
+|---|---|---|---|
+| 1 | `_normalize()` | Collapse whitespace runs to single space | Universal OCR artifact |
+| 2 | `_normalize()` | `.strip()` | Trailing/leading whitespace from model output |
+| 3 | `_normalize_gws_header()` | `\s+:` → `:` (space before colon) | Ron Ron: model reads `"GOVERNMENT WARNING :"` |
+| 4 | `_normalize_gws_body()` | `-\s+` → `` (join hyphen-breaks) | Glenfiddich: narrow-column label, model reads `"BE- CAUSE"` |
+| 5 | `_normalize_gws_body()` | `\.(` → `. (` (period-paren space) | Glenfiddich: `"BIRTH DEFECTS.(2)"` instead of `"BIRTH DEFECTS. (2)"` |
+| 6 | `_normalize_gws_body()` | `)\w` → `) \w` (paren-word space) | `"(1)According"` instead of `"(1) According"` on curved can surfaces |
+| 7 | `_strip_gws_header_prefix()` | Remove leading `GOVERNMENT WARNING: ` | Glenlivet (rotated image): model concatenates header into body field |
+
+Applied symmetrically: `_normalize_gws_body(extracted).upper() == _normalize_gws_body(GWS_CANONICAL_BODY).upper()`. Each normalization has a unit test verifying it on the motivating artifact **and** that the canonical text is unchanged.
+
+### Adding a new normalization
+
+Before adding any new normalization: (1) record the label product, image, and exact artifact in a comment; (2) verify the canonical text is unchanged by the transformation; (3) add a unit test demonstrating the artifact on the extracted text and verifying the canonical result.
+
+---
+
+## Layer 1 Schema Violations
+
+The extraction prompt specifies that every field must be a `{"value": ..., "confidence": ...}` object. Models occasionally return bare primitives instead (e.g., `"gws_present": true` instead of `"gws_present": {"value": true, "confidence": "high"}`).
+
+### Handling
+
+**Loose mode (default, `EXTRACTION_SCHEMA_STRICT=false`):** Non-dict field values are treated as `not_found` for the merged extraction result. The violation is recorded in a `schema_violations` list and returned in the API response (`schema_violations` count) and audit log (full list with field name, type received, and model). Extraction proceeds; the caller gets a compliance verdict.
+
+**Strict mode (`EXTRACTION_SCHEMA_STRICT=true`):** If any schema violations are found after all fallbacks are exhausted, an `ExtractionError` is returned. The verdict is `ERROR`. Use strict mode in production to enforce prompt compliance and surface model drift.
+
+### Quality metric
+
+The `schema_violations` count in the API response and audit log is a model quality control signal. A count above 0 on a compliant verdict means the compliance result was produced with degraded extraction data. If a specific model consistently violates the schema on certain field types, the audit log provides field-level and model-level attribution to guide prompt iteration.
+
+---
+
 ## Relationship to Other ADRs
 
 - **ADR-009** — defines the two-layer architecture; this ADR formalises the contract between Layer 1 and Layer 2.

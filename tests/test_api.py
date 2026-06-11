@@ -32,13 +32,13 @@ def _result(name: str) -> ExtractionResult:
 
 
 def _ok(name: str) -> tuple:
-    """Mock return value for a successful extraction."""
-    return (_result(name), None, 42.0, {"input_tokens": 100, "output_tokens": 50})
+    """Mock return value for a successful extraction (no schema violations)."""
+    return (_result(name), None, 42.0, {"input_tokens": 100, "output_tokens": 50}, [])
 
 
 def _err(status_code: int | None, message: str) -> tuple:
     """Mock return value for a model API failure."""
-    return (None, ExtractionError(status_code=status_code, message=message), 50.0, None)
+    return (None, ExtractionError(status_code=status_code, message=message), 50.0, None, [])
 
 
 @pytest.fixture(autouse=True)
@@ -79,7 +79,10 @@ def test_response_has_all_required_fields(client):
     body = r.json()
     for f in ("request_id", "timestamp", "verdict", "beverage_class",
               "issues", "extraction_model", "audit_logged", "partial_verification",
-              "input_tokens", "output_tokens"):
+              "input_tokens", "output_tokens",
+              "front_filename", "front_label_ref", "front_sha256",
+              "back_filename", "back_label_ref", "back_sha256",
+              "schema_violations"):
         assert f in body, f"response missing field: {f!r}"
     assert body["input_tokens"] == 100
     assert body["output_tokens"] == 50
@@ -350,6 +353,74 @@ def test_audit_write_failure_returns_200_with_audit_logged_false(client, monkeyp
         )
     assert r.status_code == 200, "audit failure must not produce HTTP 500"
     assert r.json()["audit_logged"] is False
+
+
+# ---------------------------------------------------------------------------
+# Receipt fields (FR-07) and schema_violations
+# ---------------------------------------------------------------------------
+
+def test_front_label_ref_format(client):
+    """front_label_ref must follow {stem}-{YYYYMMDDTHHmmss}Z format."""
+    import re
+    with patch("backend.app.main.extract", return_value=_ok("beer_compliant.json")):
+        r = client.post(
+            "/v1/check",
+            files={"front": ("my_label.jpg", _JPEG, "image/jpeg")},
+        )
+    body = r.json()
+    assert body["front_filename"] == "my_label.jpg"
+    assert re.fullmatch(r"my_label-\d{8}T\d{6}Z", body["front_label_ref"]), (
+        f"unexpected front_label_ref format: {body['front_label_ref']!r}"
+    )
+
+
+def test_front_sha256_is_hex_digest(client):
+    """front_sha256 must be a 64-char lowercase hex string."""
+    import hashlib
+    with patch("backend.app.main.extract", return_value=_ok("beer_compliant.json")):
+        r = client.post(
+            "/v1/check",
+            files={"front": ("front.jpg", _JPEG, "image/jpeg")},
+        )
+    body = r.json()
+    assert body["front_sha256"] == hashlib.sha256(_JPEG).hexdigest()
+
+
+def test_back_fields_none_when_no_back_panel(client):
+    """back_filename, back_label_ref, back_sha256 must be None for single-panel submissions."""
+    with patch("backend.app.main.extract", return_value=_ok("beer_compliant.json")):
+        r = client.post(
+            "/v1/check",
+            files={"front": ("front.jpg", _JPEG, "image/jpeg")},
+        )
+    body = r.json()
+    assert body["back_filename"] is None
+    assert body["back_label_ref"] is None
+    assert body["back_sha256"] is None
+
+
+def test_schema_violations_zero_for_clean_extraction(client):
+    """schema_violations must be 0 when the mock returns an empty violations list."""
+    with patch("backend.app.main.extract", return_value=_ok("beer_compliant.json")):
+        r = client.post(
+            "/v1/check",
+            files={"front": ("front.jpg", _JPEG, "image/jpeg")},
+        )
+    assert r.json()["schema_violations"] == 0
+
+
+def test_schema_violations_count_reflects_violations(client):
+    """schema_violations must equal the length of the violations list from extract()."""
+    violations = [
+        {"field": "gws_present", "type_got": "bool", "value_preview": "True", "model": "test"},
+    ]
+    mock_return = (_result("beer_compliant.json"), None, 42.0, {"input_tokens": 10, "output_tokens": 5}, violations)
+    with patch("backend.app.main.extract", return_value=mock_return):
+        r = client.post(
+            "/v1/check",
+            files={"front": ("front.jpg", _JPEG, "image/jpeg")},
+        )
+    assert r.json()["schema_violations"] == 1
 
 
 def test_invalid_magic_bytes_returns_415(client):
