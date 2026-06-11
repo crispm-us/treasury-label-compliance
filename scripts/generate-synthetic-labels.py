@@ -22,12 +22,12 @@ Usage (from repo root):
     uv run --with pillow scripts/generate-synthetic-labels.py
 
 Output:
-    test-labels/beer/prairie-creek-lager-{front,back,combined}.jpg
-    test-labels/beer/sunset-ale-R-GW-01-{front,back,combined}.jpg
-    test-labels/spirits/blue-ridge-rye-{front,back,combined}.jpg
-    test-labels/spirits/iron-ridge-bourbon-R-GW-03-{front,back,combined}.jpg
-    test-labels/wine/silverleaf-chardonnay-{front,back,combined}.jpg
-    test-labels/wine/copper-creek-merlot-R-WN-09-{front,back,combined}.jpg
+    test-labels/beer/prairie-creek-lager-synth-{front,back,combined}.jpg
+    test-labels/beer/sunset-ale-synth-R-GW-01-{front,back,combined}.jpg
+    test-labels/spirits/blue-ridge-rye-synth-{front,back,combined}.jpg
+    test-labels/spirits/iron-ridge-bourbon-synth-R-GW-03-{front,back,combined}.jpg
+    test-labels/wine/silverleaf-chardonnay-synth-{front,back,combined}.jpg
+    test-labels/wine/copper-creek-merlot-synth-R-WN-09-{front,back,combined}.jpg
 """
 
 import io
@@ -852,7 +852,7 @@ def main() -> None:
         make_beer_front(),
         make_beer_back(),
         LABELS_DIR / "beer",
-        "prairie-creek-lager",
+        "prairie-creek-lager-synth",
     )
 
     print("\nBeer — Sunset Amber Ale (noncompliant R-GW-01 — GWS absent):")
@@ -860,7 +860,7 @@ def main() -> None:
         make_beer_noncompliant_front(),
         make_beer_noncompliant_back(),
         LABELS_DIR / "beer",
-        "sunset-ale-R-GW-01",
+        "sunset-ale-synth-R-GW-01",
     )
 
     print("\nSpirits — Blue Ridge Rye Whiskey (compliant):")
@@ -868,7 +868,7 @@ def main() -> None:
         make_spirits_compliant_front(),
         make_spirits_compliant_back(),
         LABELS_DIR / "spirits",
-        "blue-ridge-rye",
+        "blue-ridge-rye-synth",
     )
 
     print("\nSpirits — Iron Ridge Bourbon (noncompliant R-GW-03):")
@@ -876,7 +876,7 @@ def main() -> None:
         make_spirits_front(),
         make_spirits_back(),
         LABELS_DIR / "spirits",
-        "iron-ridge-bourbon-R-GW-03",
+        "iron-ridge-bourbon-synth-R-GW-03",
     )
 
     print("\nWine — Silverleaf Chardonnay (compliant):")
@@ -884,7 +884,7 @@ def main() -> None:
         make_wine_compliant_front(),
         make_wine_compliant_back(),
         LABELS_DIR / "wine",
-        "silverleaf-chardonnay",
+        "silverleaf-chardonnay-synth",
     )
 
     print("\nWine — Copper Creek Merlot (noncompliant R-WN-09 — sulfite declaration absent):")
@@ -892,7 +892,7 @@ def main() -> None:
         make_wine_noncompliant_front(),
         make_wine_noncompliant_back(),
         LABELS_DIR / "wine",
-        "copper-creek-merlot-R-WN-09",
+        "copper-creek-merlot-synth-R-WN-09",
     )
 
     print("\nDone. Review images before committing to the repo.")

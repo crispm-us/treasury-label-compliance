@@ -88,15 +88,15 @@ curl http://localhost:8000/healthz
 
 ```bash
 curl -X POST http://localhost:8000/v1/check \
-  -F "front=@test-labels/beer/sunset-ale-R-GW-01-front.jpg"
+  -F "front=@test-labels/beer/sunset-ale-synth-R-GW-01-front.jpg"
 ```
 
 ### Two panels
 
 ```bash
 curl -X POST http://localhost:8000/v1/check \
-  -F "front=@test-labels/spirits/blue-ridge-rye-front.jpg" \
-  -F "back=@test-labels/spirits/blue-ridge-rye-back.jpg"
+  -F "front=@test-labels/spirits/blue-ridge-rye-synth-front.jpg" \
+  -F "back=@test-labels/spirits/blue-ridge-rye-synth-back.jpg"
 ```
 
 ### With API key (Railway deployment)

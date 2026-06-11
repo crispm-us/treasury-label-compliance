@@ -110,25 +110,25 @@ check "GET /healthz returns 200" \
 check "Beer single panel → NONCOMPLIANT (GWS on back, not submitted)" \
     200 NONCOMPLIANT \
     -X POST "${BASE_URL}/v1/check" \
-    -F "front=@test-labels/beer/prairie-creek-lager-front.jpg"
+    -F "front=@test-labels/beer/prairie-creek-lager-synth-front.jpg"
 
 check "Beer two panels → UNVERIFIABLE (GWS resolved, ABV absent)" \
     200 UNVERIFIABLE \
     -X POST "${BASE_URL}/v1/check" \
-    -F "front=@test-labels/beer/prairie-creek-lager-front.jpg" \
-    -F "back=@test-labels/beer/prairie-creek-lager-back.jpg"
+    -F "front=@test-labels/beer/prairie-creek-lager-synth-front.jpg" \
+    -F "back=@test-labels/beer/prairie-creek-lager-synth-back.jpg"
 
 check "Spirits two panels → COMPLIANT" \
     200 COMPLIANT \
     -X POST "${BASE_URL}/v1/check" \
-    -F "front=@test-labels/spirits/blue-ridge-rye-front.jpg" \
-    -F "back=@test-labels/spirits/blue-ridge-rye-back.jpg"
+    -F "front=@test-labels/spirits/blue-ridge-rye-synth-front.jpg" \
+    -F "back=@test-labels/spirits/blue-ridge-rye-synth-back.jpg"
 
 check "Wine two panels → COMPLIANT" \
     200 COMPLIANT \
     -X POST "${BASE_URL}/v1/check" \
-    -F "front=@test-labels/wine/silverleaf-chardonnay-front.jpg" \
-    -F "back=@test-labels/wine/silverleaf-chardonnay-back.jpg"
+    -F "front=@test-labels/wine/silverleaf-chardonnay-synth-front.jpg" \
+    -F "back=@test-labels/wine/silverleaf-chardonnay-synth-back.jpg"
 
 check "Unsupported Content-Type → 415" \
     415 - \
@@ -164,13 +164,13 @@ printf '\n%s\n\n' "--- Real-label tests (live model calls) ---"
 check "Henninger real front only → 200 (UNVERIFIABLE expected — GWS on separate face)" \
     200 - \
     -X POST "${BASE_URL}/v1/check" \
-    -F "front=@test-labels/beer/henninger-real-front.jpg"
+    -F "front=@test-labels/beer/henninger-front.jpg"
 
 check "Henninger real front + GWS face → 200 (GWS upside-down in photo — tests orientation)" \
     200 - \
     -X POST "${BASE_URL}/v1/check" \
-    -F "front=@test-labels/beer/henninger-real-front.jpg" \
-    -F "back=@test-labels/beer/henninger-real-gws.jpg"
+    -F "front=@test-labels/beer/henninger-front.jpg" \
+    -F "back=@test-labels/beer/henninger-gws.jpg"
 
 check "Stiegl Radler real two-panel → 200 (flavored malt beverage, imported)" \
     200 - \
@@ -183,34 +183,34 @@ check "Stiegl Radler real two-panel → 200 (flavored malt beverage, imported)" 
 check "Heineken real front only → 200 (NONCOMPLIANT expected — GWS on back panel)" \
     200 - \
     -X POST "${BASE_URL}/v1/check" \
-    -F "front=@test-labels/beer/heineken-original-real-front.jpg"
+    -F "front=@test-labels/beer/heineken-original-front.jpg"
 
 check "Heineken real front+back → 200 (expected COMPLIANT or UNVERIFIABLE after GWS resolved)" \
     200 - \
     -X POST "${BASE_URL}/v1/check" \
-    -F "front=@test-labels/beer/heineken-original-real-front.jpg" \
-    -F "back=@test-labels/beer/heineken-original-real-back.jpg"
+    -F "front=@test-labels/beer/heineken-original-front.jpg" \
+    -F "back=@test-labels/beer/heineken-original-back.jpg"
 
 # Delirium Tremens can: 3-panel cylinder — front+gws-face is the correct two-panel submission.
 check "Delirium Tremens can real front+gws → 200 (3-panel; expected COMPLIANT or UNVERIFIABLE)" \
     200 - \
     -X POST "${BASE_URL}/v1/check" \
-    -F "front=@test-labels/beer/delirium-tremens-can-real-front.jpg" \
-    -F "back=@test-labels/beer/delirium-tremens-can-real-gws.jpg"
+    -F "front=@test-labels/beer/delirium-tremens-can-front.jpg" \
+    -F "back=@test-labels/beer/delirium-tremens-can-gws.jpg"
 
 # Ron Ron Sauvignon: GWS header is in mixed case — should trigger R-GW-03 → NONCOMPLIANT.
 check "Ron Ron Sauvignon real front+back → 200 (NONCOMPLIANT expected — R-GW-03 mixed-case GWS)" \
     200 - \
     -X POST "${BASE_URL}/v1/check" \
-    -F "front=@test-labels/wine/ron-ron-sauvignon-real-front.jpg" \
-    -F "back=@test-labels/wine/ron-ron-sauvignon-real-back.jpg"
+    -F "front=@test-labels/wine/ron-ron-sauvignon-front.jpg" \
+    -F "back=@test-labels/wine/ron-ron-sauvignon-back.jpg"
 
 if [[ -n "$API_KEY" ]]; then
     # Send no key intentionally — expects 401
     response=$(curl -s \
         -w '\n__META__%{http_code}|%{time_total}' \
         -X POST "${BASE_URL}/v1/check" \
-        -F "front=@test-labels/beer/prairie-creek-lager-front.jpg" 2>&1)
+        -F "front=@test-labels/beer/prairie-creek-lager-synth-front.jpg" 2>&1)
     meta_line=$(printf '%s' "$response" | grep '__META__' || true)
     http_status=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d'|' -f1)
     time_s=$(printf '%s' "$meta_line" | sed 's/.*__META__//' | cut -d'|' -f2)

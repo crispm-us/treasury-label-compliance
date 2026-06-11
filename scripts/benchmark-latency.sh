@@ -32,9 +32,9 @@ DEFAULT_MODELS=(
 PORT=8099  # dedicated port — does not collide with the normal dev server on 8000
 BASE_URL="http://localhost:${PORT}"
 
-SINGLE_IMAGE="test-labels/beer/prairie-creek-lager-front.jpg"
-FRONT_IMAGE="test-labels/spirits/blue-ridge-rye-front.jpg"
-BACK_IMAGE="test-labels/spirits/blue-ridge-rye-back.jpg"
+SINGLE_IMAGE="test-labels/beer/prairie-creek-lager-synth-front.jpg"
+FRONT_IMAGE="test-labels/spirits/blue-ridge-rye-synth-front.jpg"
+BACK_IMAGE="test-labels/spirits/blue-ridge-rye-synth-back.jpg"
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 while getopts "n:" opt; do

@@ -132,7 +132,7 @@ The prototype is designed to handle two distinct submission modes:
 **Type (ii) — real photographs of filled bottles or cans.** A standard two-face bottle or can (most wine, spirits, and US beer cans) works naturally with a two-shot submission. Edge cases to be aware of:
 
 - *Three-face cylindrical cans* (e.g., Henninger Lager): the usable label area wraps around the cylinder and is sometimes divided into three distinct printed panels — front, back info panel, and a narrower GWS end panel. A two-panel submission must choose two of the three faces. The unchosen face produces `not_found` results for any fields it exclusively carries. This yields UNVERIFIABLE rather than a false NONCOMPLIANT. The Henninger test images in `test-labels/beer/` illustrate this case: submitting front + GWS face is the recommended pairing.
-- *Upside-down or rotated photographs:* the vision model handles orientation. The `henninger-real-gws.jpg` test image is upside-down in the photograph and the model still reads it correctly.
+- *Upside-down or rotated photographs:* the vision model handles orientation. The `henninger-gws.jpg` test image is upside-down in the photograph and the model still reads it correctly.
 - *Extreme angles, glare, or heavy curvature:* produce `low`-confidence or `not_found` results → UNVERIFIABLE rather than a false verdict.
 
 **Summary:** the prototype delivers complete coverage for type (i) and correct (non-false) verdicts for the common type (ii) cases. The only known systematic gap is three-face cylindrical cans where the GWS lives on a dedicated end panel — those produce UNVERIFIABLE on any submission that omits that face.
@@ -141,7 +141,7 @@ The prototype is designed to handle two distinct submission modes:
 
 | Product | Front | Back/GWS | Type | Notes |
 |---|---|---|---|---|
-| Henninger Lager | `henninger-real-front.jpg` | `henninger-real-gws.jpg` | (ii) | Three-face can; GWS upside-down; importer info on third face omitted |
+| Henninger Lager | `henninger-front.jpg` | `henninger-gws.jpg` | (ii) | Three-face can; GWS upside-down; importer info on third face omitted |
 | Stiegl Radler Grapefruit | `stiegl-radler-grapefruit-front.jpg` | `stiegl-radler-grapefruit-back.jpg` | (ii) | Clean two-panel; 2.5% ABV; full importer address on back |
 
 ### Tie-break policy: same confidence, both panels non-null, different values

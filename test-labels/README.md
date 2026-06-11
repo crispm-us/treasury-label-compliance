@@ -83,34 +83,34 @@ Each synthetic label embeds a notice in red/grey text on the back panel identify
 
 | File stem | Beverage | All mandatory fields |
 |---|---|---|
-| `beer/prairie-creek-lager` | Malt beverage — American Lager | Brand, class/type, net contents (12 FL OZ / 355 mL), brewer name+address, GWS (all-caps bold header, verbatim body) |
-| `spirits/blue-ridge-rye` | Distilled spirits — Straight Rye Whiskey | Brand, class/type, ABV (47%/94 Proof), net contents (750 mL), bottler name+address, GWS |
-| `wine/silverleaf-chardonnay` | Wine — 2023 Chardonnay | Brand, class/type, vintage, appellation, ABV (13.5%), net contents (750 mL), bottler name+address, CONTAINS SULFITES, GWS |
+| `beer/prairie-creek-lager-synth` | Malt beverage — American Lager | Brand, class/type, net contents (12 FL OZ / 355 mL), brewer name+address, GWS (all-caps bold header, verbatim body) |
+| `spirits/blue-ridge-rye-synth` | Distilled spirits — Straight Rye Whiskey | Brand, class/type, ABV (47%/94 Proof), net contents (750 mL), bottler name+address, GWS |
+| `wine/silverleaf-chardonnay-synth` | Wine — 2023 Chardonnay | Brand, class/type, vintage, appellation, ABV (13.5%), net contents (750 mL), bottler name+address, CONTAINS SULFITES, GWS |
 
 ### Noncompliant synthetic
 
 | File stem | Defect | Rule violated |
 |---|---|---|
-| `beer/sunset-ale-R-GW-01` | Government Warning Statement absent entirely | R-GW-01 |
-| `spirits/iron-ridge-bourbon-R-GW-03` | "Government Warning:" rendered in title case, not bold | R-GW-03 |
-| `wine/copper-creek-merlot-R-WN-09` | "CONTAINS SULFITES" declaration absent | R-WN-09 |
+| `beer/sunset-ale-synth-R-GW-01` | Government Warning Statement absent entirely | R-GW-01 |
+| `spirits/iron-ridge-bourbon-synth-R-GW-03` | "Government Warning:" rendered in title case, not bold | R-GW-03 |
+| `wine/copper-creek-merlot-synth-R-WN-09` | "CONTAINS SULFITES" declaration absent | R-WN-09 |
 
 ## Defect coverage
 
 | Defect | Expected result | Rule | Status |
 |---|---|---|---|
-| Missing Government Warning entirely | error | R-GW-01 | ✓ sunset-ale-R-GW-01 |
-| GWS header in title case, not bold | error | R-GW-03 | ✓ iron-ridge-bourbon-R-GW-03 |
+| Missing Government Warning entirely | error | R-GW-01 | ✓ sunset-ale-synth-R-GW-01 |
+| GWS header in title case, not bold | error | R-GW-03 | ✓ iron-ridge-bourbon-synth-R-GW-03 |
 | Full warning body in bold (should be header only) | error | R-GW-04 | not yet generated |
 | ABV missing from spirits label | error | R-DS-03 | not yet generated |
 | Proof stated but not equal to 2× ABV | error | R-DS-03 | not yet generated |
 | Wine ABV outside tolerance band | error | R-WN-03 | not yet generated |
-| Sulfite declaration missing (wine with SO₂ ≥10 ppm) | error | R-WN-09 | ✓ copper-creek-merlot-R-WN-09 |
+| Sulfite declaration missing (wine with SO₂ ≥10 ppm) | error | R-WN-09 | ✓ copper-creek-merlot-synth-R-WN-09 |
 | ABV present on traditional beer label | warning | R-MB-03 | not yet generated |
 
 ## Real label pairs
 
-Photographs of actual commercial labels. Named `{product-slug}-real-{panel}.jpg`. All live in `beer/` or `wine/` alongside the synthetic fixtures.
+Photographs of actual commercial labels. Named `{product-slug}-{panel}.jpg` for real labels and `{product-slug}-synth-{panel}.jpg` (or `{product-slug}-synth-{rule}-{panel}.jpg`) for synthetic labels. All live in `beer/` or `wine/` alongside the synthetic fixtures.
 
 For multi-panel submission guidance and expected verdicts, see [`docs/DEPLOYMENT_CHECKLIST.md §6`](../docs/DEPLOYMENT_CHECKLIST.md).
 
@@ -118,20 +118,20 @@ For multi-panel submission guidance and expected verdicts, see [`docs/DEPLOYMENT
 
 | Product | Front | Back/GWS | Notes |
 |---|---|---|---|
-| Henninger Lager (imported DE) | `beer/henninger-real-front.jpg` | `beer/henninger-real-gws.jpg` | 3rd face (`henninger-real-back.jpg`) has importer info; GWS face upside-down — model handles orientation |
+| Henninger Lager (imported DE) | `beer/henninger-front.jpg` | `beer/henninger-gws.jpg` | 3rd face (`henninger-back.jpg`) has importer info; GWS face upside-down — model handles orientation |
 | Stiegl Radler Grapefruit (malt bev., imported AT) | `beer/stiegl-radler-grapefruit-front.jpg` | `beer/stiegl-radler-grapefruit-back.jpg` | 2.5% ABV; `stiegl-radler-grapefruit-front.heic` for 415 rejection test |
-| Budweiser (domestic) | `beer/budweiser-real-front.jpg` | `beer/budweiser-real-back.jpg` | GWS runs vertically on side/back panel |
-| Delirium Tremens bottle (imported BE, 8.5% ABV) | `beer/delirium-tremens-bottle-real-front.jpg` | `beer/delirium-tremens-bottle-real-back.jpg` | Importer: BBL Inc, Frederick MD |
-| Delirium Tremens can (imported BE, 8.5% ABV) | `beer/delirium-tremens-can-real-front.jpg` | `beer/delirium-tremens-can-real-gws.jpg` | 3-panel cylinder; `delirium-tremens-can-real-side.jpg` has ABV + net contents |
-| Heineken Original (imported NL) | `beer/heineken-original-real-front.jpg` | `beer/heineken-original-real-back.jpg` | Clean two-panel |
-| Sierra Nevada Pale Ale (domestic) | `beer/sierra-nevada-pale-ale-real-front.jpg` | `beer/sierra-nevada-pale-ale-real-back.jpg` | Clean two-panel |
+| Budweiser (domestic) | `beer/budweiser-front.jpg` | `beer/budweiser-back.jpg` | GWS runs vertically on side/back panel |
+| Delirium Tremens bottle (imported BE, 8.5% ABV) | `beer/delirium-tremens-bottle-front.jpg` | `beer/delirium-tremens-bottle-back.jpg` | Importer: BBL Inc, Frederick MD |
+| Delirium Tremens can (imported BE, 8.5% ABV) | `beer/delirium-tremens-can-front.jpg` | `beer/delirium-tremens-can-gws.jpg` | 3-panel cylinder; `delirium-tremens-can-side.jpg` has ABV + net contents |
+| Heineken Original (imported NL) | `beer/heineken-original-front.jpg` | `beer/heineken-original-back.jpg` | Clean two-panel |
+| Sierra Nevada Pale Ale (domestic) | `beer/sierra-nevada-pale-ale-front.jpg` | `beer/sierra-nevada-pale-ale-back.jpg` | Clean two-panel |
 
 ### Wine
 
 | Product | Front | Back | Notes |
 |---|---|---|---|
-| Auchere Sancerre 2024 (imported FR) | `wine/auchere-sancerre-real-front.jpg` | `wine/auchere-sancerre-real-back.jpg` | Importer: Planet Wine Inc |
-| Baci di Sangiovese 2020, Toscana IGT (imported IT) | `wine/baci-di-sangiovese-real-front.jpg` | `wine/baci-di-sangiovese-real-back.jpg` | Importer: Planet Wine Inc |
-| Brumes de La Tour Blanche 2021 Sauternes (imported FR) | `wine/brumes-tour-blanche-real-front.jpg` | `wine/brumes-tour-blanche-real-back-a.jpg` | 4 shots total; `-back-c.jpg` shows `375 ml` net contents explicitly |
-| Loic Bulliat Bibine 2023, Beaujolais-Villages (imported FR) | `wine/bulliat-bibine-real-front.jpg` | `wine/bulliat-bibine-real-back.jpg` | Clean two-panel |
-| The "Ron Ron" Sauvignon 2023, Loire Valley (imported FR) | `wine/ron-ron-sauvignon-real-front.jpg` | `wine/ron-ron-sauvignon-real-back.jpg` | ⚠ GWS header in mixed case — R-GW-03 candidate |
+| Auchere Sancerre 2024 (imported FR) | `wine/auchere-sancerre-front.jpg` | `wine/auchere-sancerre-back.jpg` | Importer: Planet Wine Inc |
+| Baci di Sangiovese 2020, Toscana IGT (imported IT) | `wine/baci-di-sangiovese-front.jpg` | `wine/baci-di-sangiovese-back.jpg` | Importer: Planet Wine Inc |
+| Brumes de La Tour Blanche 2021 Sauternes (imported FR) | `wine/brumes-tour-blanche-front.jpg` | `wine/brumes-tour-blanche-back-a.jpg` | 4 shots total; `-back-c.jpg` shows `375 ml` net contents explicitly |
+| Loic Bulliat Bibine 2023, Beaujolais-Villages (imported FR) | `wine/bulliat-bibine-front.jpg` | `wine/bulliat-bibine-back.jpg` | Clean two-panel |
+| The "Ron Ron" Sauvignon 2023, Loire Valley (imported FR) | `wine/ron-ron-sauvignon-front.jpg` | `wine/ron-ron-sauvignon-back.jpg` | ⚠ GWS header in mixed case — R-GW-03 candidate |

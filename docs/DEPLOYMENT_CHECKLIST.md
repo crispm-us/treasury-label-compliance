@@ -55,13 +55,13 @@ curl https://<URL>/healthz
 # Beer label — expect COMPLIANT or NONCOMPLIANT (not ERROR)
 curl -X POST https://<URL>/v1/check \
   -H "X-API-Key: <KEY>" \
-  -F "front=@test-labels/beer/prairie-creek-lager-front.jpg"
+  -F "front=@test-labels/beer/prairie-creek-lager-synth-front.jpg"
 
 # Two-panel spirits — expect COMPLIANT
 curl -X POST https://<URL>/v1/check \
   -H "X-API-Key: <KEY>" \
-  -F "front=@test-labels/spirits/blue-ridge-rye-front.jpg" \
-  -F "back=@test-labels/spirits/blue-ridge-rye-back.jpg"
+  -F "front=@test-labels/spirits/blue-ridge-rye-synth-front.jpg" \
+  -F "back=@test-labels/spirits/blue-ridge-rye-synth-back.jpg"
 ```
 
 ---
@@ -100,13 +100,13 @@ Synthetic labels are sufficient for demonstrating the architecture, but real lab
 
 | Product | Front | Back/GWS | Notes |
 |---|---|---|---|
-| Henninger Lager (imported DE) | `beer/henninger-real-front.jpg` | `beer/henninger-real-gws.jpg` | GWS face upside-down in photo; importer info on a third face (`henninger-real-back.jpg`) |
+| Henninger Lager (imported DE) | `beer/henninger-front.jpg` | `beer/henninger-gws.jpg` | GWS face upside-down in photo; importer info on a third face (`henninger-back.jpg`) |
 | Stiegl Radler Grapefruit (malt bev., imported AT) | `beer/stiegl-radler-grapefruit-front.jpg` | `beer/stiegl-radler-grapefruit-back.jpg` | 2.5% ABV; full importer address on back |
-| Budweiser (domestic) | `beer/budweiser-real-front.jpg` | `beer/budweiser-real-back.jpg` | GWS on side/back panel |
-| Delirium Tremens bottle (imported BE, 8.5% ABV) | `beer/delirium-tremens-bottle-real-front.jpg` | `beer/delirium-tremens-bottle-real-back.jpg` | BBL Inc, Frederick MD; imported |
-| Delirium Tremens can (imported BE, 8.5% ABV) | `beer/delirium-tremens-can-real-front.jpg` | `beer/delirium-tremens-can-real-gws.jpg` | 3-panel cylinder; also `delirium-tremens-can-real-side.jpg` (ABV + net contents) |
-| Heineken Original (imported NL) | `beer/heineken-original-real-front.jpg` | `beer/heineken-original-real-back.jpg` | Standard two-panel |
-| Sierra Nevada Pale Ale (domestic) | `beer/sierra-nevada-pale-ale-real-front.jpg` | `beer/sierra-nevada-pale-ale-real-back.jpg` | Standard two-panel |
+| Budweiser (domestic) | `beer/budweiser-front.jpg` | `beer/budweiser-back.jpg` | GWS on side/back panel |
+| Delirium Tremens bottle (imported BE, 8.5% ABV) | `beer/delirium-tremens-bottle-front.jpg` | `beer/delirium-tremens-bottle-back.jpg` | BBL Inc, Frederick MD; imported |
+| Delirium Tremens can (imported BE, 8.5% ABV) | `beer/delirium-tremens-can-front.jpg` | `beer/delirium-tremens-can-gws.jpg` | 3-panel cylinder; also `delirium-tremens-can-side.jpg` (ABV + net contents) |
+| Heineken Original (imported NL) | `beer/heineken-original-front.jpg` | `beer/heineken-original-back.jpg` | Standard two-panel |
+| Sierra Nevada Pale Ale (domestic) | `beer/sierra-nevada-pale-ale-front.jpg` | `beer/sierra-nevada-pale-ale-back.jpg` | Standard two-panel |
 
 **HEIC rejection test:** `beer/stiegl-radler-grapefruit-front.heic` — submit to verify 415 is returned for iPhone HEIC uploads.
 
@@ -116,11 +116,11 @@ The smoke test (`scripts/smoke-test.sh`) includes real-label calls for Henninger
 
 | Product | Front | Back | Notes |
 |---|---|---|---|
-| Auchere Sancerre 2024 (imported FR) | `wine/auchere-sancerre-real-front.jpg` | `wine/auchere-sancerre-real-back.jpg` | Importer: Planet Wine Inc |
-| Baci di Sangiovese 2020, Toscana IGT (imported IT) | `wine/baci-di-sangiovese-real-front.jpg` | `wine/baci-di-sangiovese-real-back.jpg` | Importer: Planet Wine Inc |
-| Brumes de La Tour Blanche 2021 Sauternes (imported FR) | `wine/brumes-tour-blanche-real-front.jpg` | `wine/brumes-tour-blanche-real-back-a.jpg` | 4 shots; `-back-c.jpg` explicitly shows `375 ml` net contents |
-| Loic Bulliat Bibine 2023, Beaujolais-Villages (imported FR) | `wine/bulliat-bibine-real-front.jpg` | `wine/bulliat-bibine-real-back.jpg` | Standard two-panel |
-| The "Ron Ron" Sauvignon 2023, Loire Valley (imported FR) | `wine/ron-ron-sauvignon-real-front.jpg` | `wine/ron-ron-sauvignon-real-back.jpg` | ⚠ GWS header in mixed case — R-GW-03 candidate |
+| Auchere Sancerre 2024 (imported FR) | `wine/auchere-sancerre-front.jpg` | `wine/auchere-sancerre-back.jpg` | Importer: Planet Wine Inc |
+| Baci di Sangiovese 2020, Toscana IGT (imported IT) | `wine/baci-di-sangiovese-front.jpg` | `wine/baci-di-sangiovese-back.jpg` | Importer: Planet Wine Inc |
+| Brumes de La Tour Blanche 2021 Sauternes (imported FR) | `wine/brumes-tour-blanche-front.jpg` | `wine/brumes-tour-blanche-back-a.jpg` | 4 shots; `-back-c.jpg` explicitly shows `375 ml` net contents |
+| Loic Bulliat Bibine 2023, Beaujolais-Villages (imported FR) | `wine/bulliat-bibine-front.jpg` | `wine/bulliat-bibine-back.jpg` | Standard two-panel |
+| The "Ron Ron" Sauvignon 2023, Loire Valley (imported FR) | `wine/ron-ron-sauvignon-front.jpg` | `wine/ron-ron-sauvignon-back.jpg` | ⚠ GWS header in mixed case — R-GW-03 candidate |
 
 ### Multi-panel test matrix
 
