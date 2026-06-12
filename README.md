@@ -60,7 +60,19 @@ cp .env.example .env
 uv run uvicorn backend.app.main:app --reload
 ```
 
-The API is now running at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
+The API is now running at `http://localhost:8000`. A React web UI for uploading labels and viewing results is served at the same URL. Interactive API docs at `http://localhost:8000/docs`.
+
+To use the web UI from source during development, build the frontend first:
+
+```bash
+cd frontend && npm install && npm run build && cd ..
+```
+
+Or run the Vite dev server (with proxy to the backend) in a separate terminal:
+
+```bash
+cd frontend && npm run dev   # UI at http://localhost:5173
+```
 
 Run the smoke tests to confirm the full stack:
 
@@ -72,7 +84,7 @@ bash scripts/smoke-test.sh
 
 ## Scope
 
-This prototype implements the two-layer extraction + compliance architecture with 61 tests, real-label smoke tests, and a three-provider fallback chain. Several features from the original spec (React UI, Mode A verify harness, batch upload, HEIC conversion) were deliberately deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
+This prototype implements the two-layer extraction + compliance architecture with 88 tests, real-label smoke tests, a three-provider fallback chain, and a React + Vite web UI. Several features from the original spec (Mode A verify harness, batch upload, HEIC conversion) were deliberately deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
 
 ---
 
