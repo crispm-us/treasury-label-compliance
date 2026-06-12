@@ -1,0 +1,9 @@
+{
+  "_comment": "Application for Tito's Handmade Vodka — real label pair (spirits/titos-vodka-front.jpg + back.jpg). All fields read directly from label images.",
+  "brand_name": "Tito's Handmade Vodka",
+  "class_type": "Vodka",
+  "abv_pct": 40.0,
+  "net_contents": "1 L",
+  "origin": "United States",
+  "gws_required": true
+}

@@ -143,6 +143,18 @@ Each synthetic label embeds a notice in red/gray text on the back panel identify
 | Sulfite declaration missing (wine with SO₂ ≥10 ppm) | error | R-WN-09 | ✓ copper-creek-merlot-synth-R-WN-09 |
 | ABV present on traditional beer label | warning | R-MB-03 | not yet generated |
 
+## Mode A real labels (application-matching)
+
+One real label pair per beverage class with corresponding application JSON in `test-labels/applications/`. All fields confirmed from label images; brand_name and class_type are COLA-unverified (TTB registry lookup pending) — see `_comment` in each JSON.
+
+| File stem | Beverage | Application file | Verification status |
+|---|---|---|---|
+| `spirits/titos-vodka` | Tito's Handmade Vodka — Vodka, 40% ABV, 1 L, US | `titos-vodka.json` | All fields read from label ✓ |
+| `beer/sierra-nevada-pale-ale` | Sierra Nevada Pale Ale — Pale Ale, 5.6% ABV, 12 fl oz, US | `sierra-nevada-pale-ale.json` | ABV + net contents from retail sources; brand/class from label |
+| `wine/angry-orchard-iceman` | Angry Orchard Iceman — Hard Cider, 10% ABV, 750 mL, US | `angry-orchard-iceman.json` | All fields from label ✓; COLA brand_name unverified |
+
+---
+
 ## Real label pairs
 
 Photographs of actual commercial labels. Named `{product-slug}-{panel}.jpg` for real labels and `{product-slug}-synth-{panel}.jpg` (or `{product-slug}-synth-{rule}-{panel}.jpg`) for synthetic labels. Real labels live alongside the synthetic fixtures in their respective beverage-class directories.

@@ -1,0 +1,9 @@
+{
+  "_comment": "Application for Angry Orchard Iceman Hard Cider — real label pair (wine/angry-orchard-iceman-front.jpg + back.jpg). All fields confirmed from label images. Front: 'ANGRY ORCHARD' (brand, ™) + 'ICEMAN' (product/fantasy name, largest text); 'HARD CIDER' class/type; 'ALC. 10% BY VOL.'; '750 ML'. Back: 'BOTTLED BY ANGRY ORCHARD CIDER COMPANY, LLC, CINCINNATI, OH'; 'CONTAINS SULFITES'; GWS present. COLA brand_name UNVERIFIED: may be 'Angry Orchard Iceman' (combined) or 'Angry Orchard' (brand only) — TTB registry not accessible for confirmation.",
+  "brand_name": "Angry Orchard",
+  "class_type": "Hard Cider",
+  "abv_pct": 10.0,
+  "net_contents": "750 mL",
+  "origin": "United States",
+  "gws_required": true
+}
