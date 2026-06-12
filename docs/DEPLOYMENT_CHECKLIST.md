@@ -93,6 +93,8 @@ API smoke tests (curl):
 
 UI smoke tests (browser, via Railway URL) — screenshots in `docs/ui-screenshots/`:
 
+Screenshots linked in §6 below reflect the current extraction prompt (post-LBL-AUD-0612). The `-postprompt` suffix was a temporary staging label and has been dropped from filenames.
+
 | Label | Panels | Class | Verdict | Notes |
 |---|---|---|---|---|
 | Blue Ridge Rye (synth) | front + back | spirits | COMPLIANT ✓ | 0 violations — baseline |
@@ -205,9 +207,9 @@ For each product below, the "front-only" submission exercises the path where com
 | Product | Front-only | Front+back | Notes |
 |---|---|---|---|
 | **Synthetic labels** | | | |
-| Copper Creek Merlot synth (R-WN-09) | — | UNVERIFIABLE ✓ (R-WN-08, R-WN-09) | R-WN-08: vintage year detected but appellation not visible — pre-prompt model silently returned null appellation without triggering this rule; post-prompt it correctly fires; R-WN-09 still fires (sulfite declaration unverifiable from image, unchanged); schema_violations=0 (was 9 pre-prompt); verdict change is improvement in model honesty; screenshot: docs/ui-screenshots/railway-copper-creek-merlot-unverifiable-postprompt.png |
+| Copper Creek Merlot synth (R-WN-09) | — | UNVERIFIABLE ✓ (R-WN-08, R-WN-09) | R-WN-08: vintage year detected but appellation not visible — pre-prompt model silently returned null appellation without triggering this rule; post-prompt it correctly fires; R-WN-09 still fires (sulfite declaration unverifiable from image, unchanged); schema_violations=0 (was 9 pre-prompt); verdict change is improvement in model honesty; screenshot: docs/ui-screenshots/railway-copper-creek-merlot-unverifiable.png |
 | Silverleaf Chardonnay synth (compliant baseline) | — | **COMPLIANT** ✓ | schema_violations=0 — cleanest extraction in corpus |
-| Blue Ridge Rye synth (compliant baseline, reversed panels) | — | **COMPLIANT** ✓ | Panels submitted reversed (back→front slot); schema_violations=0 post-prompt (was 11 pre-prompt); merge correctly handles wrong slot; screenshot: docs/ui-screenshots/railway-blue-ridge-rye-compliant-postprompt.png |
+| Blue Ridge Rye synth (compliant baseline, reversed panels) | — | **COMPLIANT** ✓ | Panels submitted reversed (back→front slot); schema_violations=0 post-prompt (was 11 pre-prompt); merge correctly handles wrong slot; screenshot: docs/ui-screenshots/railway-blue-ridge-rye-synth-compliant-reversed.png |
 | **Real labels — spirits** | | | |
 | Tito's Vodka | NONCOMPLIANT ✓ (R-GW-01, R-DS-04, R-DS-03) | **COMPLIANT** ✓ | GWS on back correctly found; schema_violations=4 (compliant verdict despite violations) |
 | JD Old No. 7 EU 70cl | NONCOMPLIANT ✓ (R-GW-01) | — (front only) | Non-US label; no GWS |
@@ -218,8 +220,8 @@ For each product below, the "front-only" submission exercises the path where com
 | Stiegl Radler | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | ⚠ Previous prediction was UNVERIFIABLE — model finds 2.5% ABV on label; actual COMPLIANT |
 | Budweiser | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ (R-MB-04) | ⚠ Robustness test only — panels reversed intentionally to verify panel-agnostic merge; net contents absent from both panels; UNVERIFIABLE is expected and correct; not a compliance signal |
 | Delirium Tremens bottle | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02, R-MB-04) | R-GW-02 body mismatch; schema_violations=8 (model returned 8 bare primitives — notable quality signal); screenshot: docs/ui-screenshots/railway-delirium-tremens-bottle-noncompliant.png |
-| Delirium Tremens can | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ (R-GW-03, R-GW-02, R-MB-04, R-MB-03 — all warnings) | Post-prompt: R-GW-02 downgraded from error to warning (model less certain on partially-obscured GWS body); all-warnings verdict → UNVERIFIABLE; schema_violations pre-prompt=8, post-prompt not captured; screenshot: docs/ui-screenshots/railway-delirium-tremens-can-unverifiable-postprompt.png |
-| Delirium Tremens can — 3-panel hybrid (Option B) | — | NONCOMPLIANT ✓ (R-GW-02) | `front=beer/delirium-tremens-can-front.jpg`, `back=beer/delirium-tremens-can-gws-side.jpg` (GWS + side stitched); R-GW-02 error on `gws_body`; duration 2.80 s; schema_violations=0; model gemini/gemini-2.5-flash-lite; confirms genuine "OR TO OPERATE MACHINERY" violation (same root cause as bottle row above); screenshot: docs/ui-screenshots/railway-delirium-tremens-can-noncompliant-postprompt.png |
+| Delirium Tremens can | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ (R-GW-03, R-GW-02, R-MB-04, R-MB-03 — all warnings) | Post-prompt: R-GW-02 downgraded from error to warning (model less certain on partially-obscured GWS body); all-warnings verdict → UNVERIFIABLE; schema_violations pre-prompt=8, post-prompt not captured; screenshot: docs/ui-screenshots/railway-delirium-tremens-can-unverifiable.png |
+| Delirium Tremens can — 3-panel hybrid (Option B) | — | NONCOMPLIANT ✓ (R-GW-02) | `front=beer/delirium-tremens-can-front.jpg`, `back=beer/delirium-tremens-can-gws-side.jpg` (GWS + side stitched); R-GW-02 error on `gws_body`; duration 2.80 s; schema_violations=0; model gemini/gemini-2.5-flash-lite; confirms genuine "OR TO OPERATE MACHINERY" violation (same root cause as bottle row above); screenshot: docs/ui-screenshots/railway-delirium-tremens-can-noncompliant.png |
 | Heineken Original | NONCOMPLIANT ✓ (R-GW-01, R-MB-04, R-MB-05 ×2) | **COMPLIANT** ✓ | |
 | Sierra Nevada Pale Ale | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | partial_verification; R-MB-04 + R-MB-03 warnings (net contents + ABV not visible); schema_violations=0 |
 | **Real labels — wine** | | | |
