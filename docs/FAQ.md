@@ -119,7 +119,7 @@ Python ≥ 3.10, [uv](https://github.com/astral-sh/uv), copy `.env.example` → 
 JPEG, PNG, WebP; 10 MB per panel. HEIC/TIFF/PDF return 415. See [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md), [ADR-008](adr/008-image-preprocessing.md).
 
 **Deployment auth?**
-Set `API_KEY`; send `X-API-Key` on every request. Unset locally = no auth.
+Set `API_KEY`; send `X-API-Key` on every request. Unset locally = no auth. `POST /v1/check` is also rate-limited at 20 requests/minute per IP (slowapi); returns HTTP 429 on breach. `GET /healthz` and `GET /version` are unrestricted.
 
 **Tests without an API key?**
 `uv run --with pytest pytest tests/ -v` — extraction is mocked throughout.
@@ -154,7 +154,7 @@ Prompt forbids completing GWS from memory; text evidence overrides false `gws_pr
 [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) is authoritative. [docs/adr/README.md](adr/README.md) maps each ADR to implementation status — several ADRs describe accepted designs not yet built.
 
 **Does it meet the original <5 s SLA?**
-Single-panel yes with Flash-Lite (~2.5 s warm). Two-panel borderline (~5.1 s). Full accounting: [latency-benchmarks.md](latency-benchmarks.md).
+Yes for all tested configurations. Single-panel Flash-Lite ~2.5 s; two-panel parallel ~2.2 s (Flash-Lite), ~4.4 s (Haiku), ~4.8 s (GPT nano). The two-panel path runs both panel extractions concurrently via `ThreadPoolExecutor`. Full accounting: [latency-benchmarks.md](latency-benchmarks.md).
 
 ---
 
@@ -182,7 +182,7 @@ Read [docs/adr/README.md](adr/README.md) status table alongside [IMPLEMENTATION_
 Historical context for scope decisions and stakeholder constraints (no COLA integration, no persistent storage, verbatim GWS requirement). Not current behavior.
 
 **What would production need beyond this prototype?**
-Human review queue for NONCOMPLIANT/UNVERIFIABLE; schema version gate; Unicode normalization for GWS; calibrated R-GW-04 bold check; full image preprocessing; rate limiting; COLA integration; net-contents parsing; appellation verification; deployment hardening. Listed in [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md).
+Human review queue for NONCOMPLIANT/UNVERIFIABLE; schema version gate; Unicode normalization for GWS; calibrated R-GW-04 bold check; full image preprocessing; COLA integration; net-contents parsing; appellation verification; deployment hardening. Listed in [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md).
 
 **How was quality validated beyond unit tests?**
 Synthetic labels with embedded defect markers; real bottle/can photographs; `scripts/smoke-test.sh`; `scripts/benchmark-latency.sh`. Real labels exposed rotation, multi-panel, and hallucination edge cases documented in [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md) and [project-log.md](project-log.md).
