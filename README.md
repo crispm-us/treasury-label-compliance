@@ -84,7 +84,7 @@ bash scripts/smoke-test.sh
 
 ## Scope
 
-This prototype implements the two-layer extraction + compliance architecture with 101 tests, `GET /v1/applications` COLA stub catalog, real-label smoke tests, a three-provider fallback chain, and a React + Vite web UI. Mode A application-matching is implemented end-to-end (API + UI COLA stub toggle; COLA on-file integration deferred). Batch upload and HEIC conversion remain deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
+This prototype implements the two-layer extraction + compliance architecture with 105 tests, `GET /v1/applications` COLA stub catalog, real-label smoke tests, a three-provider fallback chain, and a React + Vite web UI. Mode A application-matching is implemented end-to-end (API + UI COLA stub toggle; COLA on-file integration deferred). Batch upload and HEIC conversion remain deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
 
 ---
 
@@ -209,7 +209,7 @@ All tests mock the extraction layer — no API key or network access required.
 uv run --with pytest pytest tests/ -v
 ```
 
-101 tests across `tests/test_api.py`, `tests/test_compliance_checker.py`, `tests/test_extractor.py`, and `tests/test_application_checker.py`. See `tests/` for full coverage.
+105 tests across `tests/test_api.py`, `tests/test_compliance_checker.py`, `tests/test_extractor.py`, and `tests/test_application_checker.py`. See `tests/` for full coverage.
 
 ---
 
@@ -240,6 +240,7 @@ See [`docs/README.md`](docs/README.md) for a reading-order guide and audience ma
 - [`docs/requirements-analysis.md`](docs/requirements-analysis.md) — Original stakeholder spec (historical; many FRs deferred)
 - [`docs/latency-benchmarks.md`](docs/latency-benchmarks.md) — Observed extraction latency across four models; benchmark script usage
 - [`docs/DEPLOYMENT_CHECKLIST.md`](docs/DEPLOYMENT_CHECKLIST.md) — Pre-push hygiene, Railway deployment, and real-label test matrix
+- [`docs/prompt-audit-LBL-AUD-0612.md`](docs/prompt-audit-LBL-AUD-0612.md) — Two-auditor extraction prompt audit (ChatGPT GPT-4o + Gemini); 22 issues; implemented 2026-06-12
 - [`test-labels/README.md`](test-labels/README.md) — Test label corpus: synthetic fixtures, defect coverage, and real label pairs
 - [`docs/FAQ.md`](docs/FAQ.md) — Two-part FAQ: Part I for users and integrators; Part II for evaluators and interviewers
 

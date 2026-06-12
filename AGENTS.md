@@ -32,7 +32,7 @@ Read in this order:
 | Claim | Where to verify |
 |---|---|
 | <5 s SLA | `docs/latency-benchmarks.md` (parallel extraction section) |
-| 101 tests, 0 failures | Run `uv run --with pytest pytest` — no API key needed; extraction is fully mocked |
+| 105 tests, 0 failures | Run `uv run --with pytest pytest` — no API key needed; extraction is fully mocked |
 | Three-provider fallback | `backend/app/services/extractor.py` + `backend/app/config.py` |
 | Parallel extraction | `backend/app/services/extractor.py` (`ThreadPoolExecutor`) |
 | Railway deployment | `DEPLOYMENT_CHECKLIST.md` + `docs/ui-screenshots/` |

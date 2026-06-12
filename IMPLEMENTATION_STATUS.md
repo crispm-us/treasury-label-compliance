@@ -104,16 +104,16 @@ Application JSON is assumed authoritative: null means the field was not declared
 
 **Known R-APP false positive patterns (observed in Railway smoke tests, 2026-06-12):**
 
-- **R-APP-01 (brand name)** — high false-positive rate. Two failure modes: (1) model extracts the distillery or winery name (the most prominent entity text) instead of the COLA-declared brand name — e.g. "Canyon Ridge Distillery" vs "Canyon Ridge Bourbon", "Mesa Verde Winery" vs "Mesa Verde Chardonnay"; (2) model extracts a shortened form — e.g. "Tito's" vs "Tito's Handmade Vodka". Root cause is extraction accuracy, not schema design. Production fix: improve the extraction prompt to distinguish brand name from producer entity name. A normalized substring heuristic (if extracted brand is a substring of declared brand or vice versa, treat as tentative match) would address case (2) but not case (1). See FAQ §4 for the full analysis of why a two-field schema approach does not apply here.
+- **R-APP-01 (brand name)** — high false-positive rate. Two failure modes: (1) model extracts the most prominent display headline instead of the COLA-declared brand name — e.g. "CANYON RIDGE" vs "Canyon Ridge Bourbon", "MESA VERDE" or "MESA VERDE WINERY" vs "Mesa Verde Chardonnay"; (2) model extracts a shortened form — e.g. "Tito's" vs "Tito's Handmade Vodka". Root cause is extraction accuracy, not schema design. Production fix: improve the extraction prompt to distinguish brand name from producer entity name. A normalized substring heuristic (if extracted brand is a substring of declared brand or vice versa, treat as tentative match) would address case (2) but not case (1). See FAQ §4 for the full analysis of why a two-field schema approach does not apply here.
 
-- **R-APP-05 (origin)** — high false-positive rate. Root cause: exact string comparison against a single declared origin value, while the vision model extracts origin at varying specificity levels (state name, city+state, "American", etc.). Fixed in the `origin_as_stated` / `origin_iso2_country` redesign — see `application.py` and FAQ §4.
+- **R-APP-05 (origin)** — high false-positive rate. Root cause: exact string comparison against a single declared origin value, while the vision model extracts origin at varying specificity levels (state name, city+state, "American", etc.). Fixed in the `origin_as_stated` / `origin_iso2_country` redesign — see `application.py` and FAQ §4. Post-prompt LBL-AUD-0612 (2026-06-12): extraction improvement for beer and spirits — model now reads origin from the class/type line on the label face ("AMERICAN LAGER" → "American"; "Kentucky Straight Bourbon Whiskey" → "Kentucky") rather than the bottler address. Wine labels lack a geographic anchor in the class/type text; R-APP-05 false-positive rate remains high for wine.
 
-- **R-APP-04 (net contents)** — one miss observed: label "1.0 L" vs stub "750 mL" not detected, likely because the model returned `not_found` for `net_contents` on that synthetic label. Unit-parsing (liters ↔ milliliters) is not implemented; the checker does normalized string comparison only.
+- **R-APP-04 (net contents)** — correctly detected post-prompt LBL-AUD-0612: label "1.0 L" vs stub "750 mL" fires as expected (Canyon Ridge R-APP-04 batch run, 2026-06-12). Previously a miss when the model returned `not_found` for `net_contents`. Unit-parsing (liters ↔ milliliters) is not implemented; the checker does normalized string comparison only.
 
 Without `application`, Mode B behavior is unchanged (`mode: "regulation_only"`).
 
 ### Test suite
-- 101 tests, 0 failures on Python 3.14 (uv run --with pytest pytest)
+- 105 tests, 0 failures on Python 3.14 (uv run --with pytest pytest)
 - All extraction mocked — no API key required, no network calls
 - `client` fixture clears `API_KEY` via `monkeypatch.setattr("backend.app.main.API_KEY", "")` to isolate tests from host environment
 - `client` fixture calls `limiter._storage.reset()` before each test — see **slowapi test interference** below

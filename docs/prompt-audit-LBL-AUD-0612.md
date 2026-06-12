@@ -3,7 +3,7 @@
 **Date:** 2026-06-12
 **Auditors:** ChatGPT (GPT-4o), Gemini (2 passes), Cris Pedregal Martin
 **Scope:** `backend/app/prompts/extraction.py` — `SYSTEM` and `USER_TEMPLATE` constants
-**Status:** Analysis complete; implementation pending
+**Status:** Analysis complete; implemented 2026-06-12
 
 ---
 

@@ -136,7 +136,7 @@ Batch ([ADR-007](adr/007-batch-processing-design.md)) is not built. Mode A appli
 **Why does R-APP-01 (brand name match) produce false positives on real and synthetic labels?**
 R-APP-01 false positives are extraction errors — the vision model reads the wrong text element from the label — not a schema design problem. Two distinct failure modes are observed:
 
-1. **Producer entity name ≠ brand name**: The model reads the distillery or winery name (the most prominent entity text) instead of the brand name as declared in the COLA. Examples: "Canyon Ridge Distillery" extracted when the declared brand is "Canyon Ridge Bourbon"; "Mesa Verde Winery" extracted when the declared brand is "Mesa Verde Chardonnay". The distillery/winery name is a categorically different label element from the brand name.
+1. **Display headline ≠ declared brand**: The model reads the most prominent display headline on the label face instead of the brand name as declared in the COLA. Examples: "CANYON RIDGE" extracted when the declared brand is "Canyon Ridge Bourbon"; "MESA VERDE" or "MESA VERDE WINERY" extracted when the declared brand is "Mesa Verde Chardonnay". The display headline is a categorically different label element from the full declared brand string.
 
 2. **Shortened brand form**: The model reads the shortened or prominent form of the brand rather than the full declared string. Example: "Tito's" extracted when the COLA-declared brand is "Tito's Handmade Vodka". The label displays "TITO'S" in large type and "Handmade Vodka" as a secondary descriptor — the model treats only the large text as the brand name.
 
@@ -152,6 +152,8 @@ US origin determination is not a string-normalization problem solvable with a fi
 For wine, the declared `country_of_origin` in a COLA application may be a state, a county, or a federally recognized American Viticultural Area (AVA) — not just the country. An application may legitimately declare `"California"`, `"Napa Valley"`, or `"Paso Robles"` rather than `"United States"`. A production resolver must understand the TTB appellation hierarchy: AVA ⊂ county ⊂ state ⊂ US, and map any extracted text to the correct level for comparison. This is out of scope for a string-matching rule.
 
 The production design should delegate to an external geo-normalization service rather than maintaining an in-house enumeration — the same argument that leads to delegating sales tax computation to a zipcode-aware service (Avalara, TaxJar, etc.) rather than encoding tax rules in application code. A single classification call at check time (extracted string → ISO 3166-1 country code) is the clean architecture; the R-APP-05 rule then compares codes, not strings.
+
+Post-prompt LBL-AUD-0612 (2026-06-12): beer and spirits labels now extract origin from the class/type line on the label face rather than the bottler address; wine labels remain unfixed because class/type text lacks a reliable geographic anchor.
 
 This is a documented prototype limitation. The current R-APP-05 false-positive rate on genuine US-origin labels is high; treat R-APP-05 `warning`-severity results as informational until normalization is addressed.
 
