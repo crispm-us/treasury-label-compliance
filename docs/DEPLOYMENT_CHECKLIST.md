@@ -106,6 +106,27 @@ UI smoke tests (browser, via Railway URL) — screenshots in `docs/ui-screenshot
 | Baci di Sangiovese | front + back | wine | COMPLIANT ✓ | 0 violations — clean European wine label |
 | Budweiser | front + back (reversed) | beer | COMPLIANT ✓ | Panels submitted in wrong order; merge robust for non-rotated labels |
 
+### Mode A (application-matching) smoke tests (2026-06-12, Railway)
+
+Two systemic false-positive sources observed across all Mode A checks:
+
+- **R-APP-01 (brand_name)**: Model extracts the distillery or winery name from the most prominent label text (e.g. "Canyon Ridge Distillery", "Mesa Verde Winery") rather than the full declared brand string ("Canyon Ridge Bourbon", "Mesa Verde Chardonnay"). Exact-string match fails. Root cause: brand name ≠ winery/distillery name on these labels. For wine synthetics there is an additional stub design issue — the stub `brand_name` is "Mesa Verde Chardonnay" (winery + varietal) while the label prints "MESA VERDE WINERY" as the brand, which is realistic; a real COLA application would declare only the brand as it appears on the label.
+- **R-APP-05 (country_of_origin)**: Model extracts state name, abbreviation, or "American" rather than the declared stub value ("United States" or "California"). For wine, the declared origin may be at state or AVA level — a full appellation hierarchy problem, not just country-name normalization. See FAQ §4 for the production design note (geo-normalization service).
+
+One miss:
+
+- **R-APP-04 (net contents)**: Did not fire on the Canyon Ridge R-APP-04 variant (label "1.0 L" vs stub "750 mL"). Model likely returned `not_found` for `net_contents`; mismatch not detected.
+
+| Label | Stub | Expected | Actual violations | Notes |
+|---|---|---|---|---|
+| Tito's (front+back, real) | Tito's Handmade Vodka | none (compliant) | R-APP-01, R-APP-04, R-APP-05 | R-APP-01: "Tito's" ≠ "Tito's Handmade Vodka"; R-APP-04: "1L" ≠ "1 L"; R-APP-05: "American" ≠ "United States" — all normalization FPs |
+| Angry Orchard Iceman (front+back, real) | Angry Orchard Iceman | none (compliant) | R-GW-02 warning only | UNVERIFIABLE + application match; R-APP-* clean ✓; GWS body low-confidence (partially obscured) |
+| Canyon Ridge Bourbon — compliant (synth) | Canyon Ridge Bourbon | none | R-APP-01, R-APP-05 | Both normalization FPs; see above |
+| Canyon Ridge Bourbon — R-APP-04 (synth) | Canyon Ridge Bourbon | R-APP-04 | R-APP-01, R-APP-05 | **R-APP-04 missed** — net_contents not_found; same normalization FPs |
+| Canyon Ridge Bourbon — R-APP-01-02 (synth) | Canyon Ridge Bourbon | R-APP-01, R-APP-02 | R-APP-01, R-APP-02, R-APP-05 | R-APP-01 ✓; R-APP-02 ✓ (ABV 48% vs 45%); R-APP-05 FP |
+| Mesa Verde Chardonnay — compliant (synth) | Mesa Verde Chardonnay | none | R-APP-01, R-APP-05 | R-APP-01: "Mesa Verde Winery" ≠ "Mesa Verde Chardonnay"; R-APP-05: stub declares "California" — appellation-level origin not matched |
+| Mesa Verde Chardonnay — R-APP-03 (synth) | Mesa Verde Chardonnay | R-APP-03 | R-APP-01, R-APP-03, R-APP-05 | R-APP-03 ✓ (class/type "Chardonnay" mismatch detected); R-APP-01 and R-APP-05 same FPs as compliant variant |
+
 ---
 
 ## 5. Smoke-test coverage gaps (address before Railway deployment)
