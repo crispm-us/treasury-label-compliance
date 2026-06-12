@@ -129,7 +129,7 @@ Python ≥ 3.10, [uv](https://github.com/astral-sh/uv), copy `.env.example` → 
 JPEG, PNG, WebP; 10 MB per panel. HEIC/TIFF/PDF return 415. See [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md), [ADR-008](adr/008-image-preprocessing.md).
 
 **Deployment auth?**
-Set `API_KEY`; send `X-API-Key` on every request. Unset locally = no auth. `POST /v1/check` is also rate-limited at 20 requests/minute per IP (slowapi); returns HTTP 429 on breach. `GET /healthz` and `GET /version` are unrestricted.
+Set `API_KEY`; send `X-API-Key` on `POST /v1/check`. Unset locally = no auth. `POST /v1/check` is also rate-limited at 20 requests/minute per IP (slowapi); returns HTTP 429 on breach. `GET /healthz` and `GET /version` are unrestricted. These are prototype deployment artifacts, not production design recommendations — see Part II §5, *Which features are prototype submission artifacts and would be absent or different in production?*
 
 **Tests without an API key?**
 `uv run --with pytest pytest tests/ -v` — extraction is mocked throughout.
@@ -226,6 +226,16 @@ GWS OCR false positives on punctuation (R-GW-03); hallucinated GWS body on rotat
 
 **What artifacts demonstrate honest scoping?**
 [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) (built/deferred/not started); ADR status icons in [docs/adr/README.md](adr/README.md); prototype notice in [README.md](../README.md); deferred rules (R-GW-04, R-MB-03) explained with *why*, not just *what*.
+
+**Which features are prototype submission artifacts and would be absent or different in production?**
+
+Three features exist because this is a public prototype deployment under evaluation, not production software. For the broader production gap list, see *What would production need beyond this prototype?* above.
+
+**API key field in the UI.** The Railway endpoint is publicly reachable — anyone with the URL can call it. `API_KEY` / `X-API-Key` limits access to authorized users without requiring evaluators to use curl. The UI key-entry field is a usability accommodation for that handoff. In production, authentication is at the network or service layer (OAuth, mTLS, a reverse proxy's auth middleware) and never appears as a form field in the application UI.
+
+**Per-IP rate limiting (slowapi, 20 req/min).** Each extraction call has real provider cost on a publicly reachable deployment. The rate limiter prevents accidental or intentional cost overruns from an unprotected public URL. In production, rate limiting is an API gateway or load-balancer concern, governed by authenticated client identity and service-level agreements — not an in-process per-IP counter.
+
+**`AUDIT_ENABLED=false` on Railway.** Railway's filesystem is ephemeral: a redeploy wipes it. Leaving audit logging enabled against a local JSONL file would produce logs that silently disappear. The flag is set to `false` to avoid false confidence that a record is being retained. Production deployment ships logs to a structured sink (Cloud Logging, Datadog, etc.) rather than a local file — see [ADR-010](adr/010-audit-logging.md).
 
 **What real-world engineering problems were encountered and fixed?**
 Three specific incidents: (1) `API_KEY` shell environment bleed-through — setting `API_KEY` in `~/.zshrc` for local deployment convenience caused 25 test failures (all 401), because `TestClient` creates the app in-process and `API_KEY` was read from the live shell environment; fixed by monkeypatching `API_KEY` to `""` in the `client` fixture so tests are isolated from host environment regardless of what is set in the shell. (2) `slowapi` in-memory test contamination — adding rate limiting caused 7 test failures after the 20th `/v1/check` call in a pytest run; fixed by resetting `limiter._storage` between tests. (3) Railway deploy sequence — environment variables must be set in the service Variables tab (not Project Settings → Shared Variables) and applied before the first deployment. These are documented in [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md).
