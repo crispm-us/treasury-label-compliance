@@ -1,9 +1,10 @@
 {
-  "_comment": "Application for Sierra Nevada Pale Ale — real label pair (beer/sierra-nevada-pale-ale-front.jpg + back.jpg). Front label confirms: 'SIERRA NEVADA®' (brand), 'PALE ALE' + 'HANDCRAFTED ALE' (class/type), brewer 'Sierra Nevada Brewing Co., Chico, CA & Mills River, NC'. ABV 5.6% and net_contents 12 fl oz confirmed from retail sources (fine print not legible in photos); not COLA-verified. COLA brand_name UNVERIFIED: likely 'Sierra Nevada Pale Ale' (full product) or 'Sierra Nevada' (brand only with Pale Ale as class/type designation).",
+  "_comment": "Application for Sierra Nevada Pale Ale — real label pair (beer/sierra-nevada-pale-ale-front.jpg + back.jpg). Dual-location brewer (CA + NC); no state-level origin claim — origin_as_stated is country only. ABV + net contents from retail sources; brand/class from label.",
   "brand_name": "Sierra Nevada Pale Ale",
   "class_type": "Pale Ale",
   "abv_pct": 5.6,
   "net_contents": "12 fl oz",
-  "origin": "United States",
+  "origin_as_stated": "United States",
+  "origin_iso2_country": "US",
   "gws_required": true
 }

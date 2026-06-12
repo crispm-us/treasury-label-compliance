@@ -546,7 +546,8 @@ def test_mode_a_brand_mismatch(client):
         "class_type": "American Lager",
         "abv_pct": 5.0,
         "net_contents": "12 fl oz",
-        "origin": "United States",
+        "origin_as_stated": "San Francisco, California",
+        "origin_iso2_country": "US",
     })
     with patch("backend.app.main.extract", return_value=_ok("beer_mode_a_R_APP_01.json")):
         r = client.post(

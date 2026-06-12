@@ -1,9 +1,10 @@
 {
-  "_comment": "Application for Mesa Verde Chardonnay — R-APP-03 fixture. Label shows 'White Wine' as class/type but application says 'Chardonnay'. Class/type mismatch.",
+  "_comment": "Application for Mesa Verde Chardonnay — R-APP-03 fixture. Class/type mismatch only; origin_as_stated matches label.",
   "brand_name": "Mesa Verde Chardonnay",
   "class_type": "Chardonnay",
   "abv_pct": 13.5,
   "net_contents": "750 mL",
-  "origin": "California",
+  "origin_as_stated": "California",
+  "origin_iso2_country": "US",
   "gws_required": true
 }

@@ -7,6 +7,8 @@ Rule IDs R-APP-01 through R-APP-05.
 """
 from __future__ import annotations
 
+import re
+
 from backend.app.models.application import ApplicationFields
 from backend.app.services.compliance_checker import ExtractionFields, FieldValue, Issue
 
@@ -17,6 +19,16 @@ _ABV_TOLERANCE_PCT = 0.5
 
 def _normalize_ws(text: str) -> str:
     return " ".join(text.split())
+
+
+_ORIGIN_PUNCT_RE = re.compile(r"[^\w\s]", re.UNICODE)
+
+
+def _normalize_origin(text: str) -> str:
+    """Collapse whitespace, strip punctuation, casefold for R-APP-05 comparison."""
+    collapsed = " ".join(text.split())
+    stripped = _ORIGIN_PUNCT_RE.sub("", collapsed)
+    return " ".join(stripped.split()).casefold()
 
 
 def _low_conf_suffix(confidence: str) -> str:
@@ -154,12 +166,12 @@ def _check_origin(
     application: ApplicationFields,
     issues: list[Issue],
 ) -> None:
-    if application.origin is None:
+    if application.origin_as_stated is None:
         return
     fv = extracted.country_of_origin
     if not _usable(fv) or fv.value is None:
         return
-    if str(fv.value).casefold() != application.origin.casefold():
+    if _normalize_origin(str(fv.value)) != _normalize_origin(application.origin_as_stated):
         issues.append(Issue(
             rule_id="R-APP-05",
             severity="warning",
@@ -167,6 +179,6 @@ def _check_origin(
             found=fv.value,
             expected=(
                 f"Origin must match application declaration "
-                f"'{application.origin}'{_low_conf_suffix(fv.confidence)}"
+                f"'{application.origin_as_stated}'{_low_conf_suffix(fv.confidence)}"
             ),
         ))

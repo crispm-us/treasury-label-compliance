@@ -1,9 +1,10 @@
 {
-  "_comment": "Application for Canyon Ridge Bourbon — R-APP-04 fixture. Label shows '1.0 L' net contents but application declares '750 mL'. Net contents mismatch.",
+  "_comment": "Application for Canyon Ridge Bourbon — R-APP-04 fixture. Net contents mismatch only; origin_as_stated matches label.",
   "brand_name": "Canyon Ridge Bourbon",
   "class_type": "Straight Bourbon Whiskey",
   "abv_pct": 45.0,
   "net_contents": "750 mL",
-  "origin": "United States",
+  "origin_as_stated": "Lawrenceburg, Kentucky",
+  "origin_iso2_country": "US",
   "gws_required": true
 }

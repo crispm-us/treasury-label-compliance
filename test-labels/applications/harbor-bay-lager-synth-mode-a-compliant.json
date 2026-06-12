@@ -1,9 +1,10 @@
 {
-  "_comment": "Application for Harbor Bay Lager — compliant Mode A fixture. Label matches all application fields.",
+  "_comment": "Application for Harbor Bay Lager — compliant Mode A fixture. Label prints 'San Francisco, California'; origin_iso2_country asserts US.",
   "brand_name": "Harbor Bay Lager",
   "class_type": "American Lager",
   "abv_pct": 5.0,
   "net_contents": "12 fl oz",
-  "origin": "United States",
+  "origin_as_stated": "San Francisco, California",
+  "origin_iso2_country": "US",
   "gws_required": true
 }

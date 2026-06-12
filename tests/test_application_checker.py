@@ -13,7 +13,7 @@ import copy
 import json
 from pathlib import Path
 
-from backend.app.models.application import ApplicationFields
+from backend.app.models.application import ApplicationFields, provided_field_names
 from backend.app.services.application_checker import check
 from backend.app.services.compliance_checker import ExtractionFields, ExtractionResult
 
@@ -95,11 +95,52 @@ def test_class_type_mismatch():
     assert app_issues[0].severity == "error"
 
 
+def test_origin_match():
+    issues = check(
+        _fields("wine_mode_a_compliant.json"),
+        _app("mesa-verde-chardonnay-synth-mode-a-compliant.json"),
+    )
+    assert "R-APP-05" not in _rule_ids(issues)
+
+
+def test_origin_match_normalized_punctuation_and_whitespace():
+    data = copy.deepcopy(json.loads((FIXTURES / "wine_mode_a_compliant.json").read_text()))
+    data["fields"]["country_of_origin"]["value"] = "  California ,  "
+    fields = ExtractionResult.from_dict(data).fields
+    application = ApplicationFields(origin_as_stated="California", origin_iso2_country="US")
+    issues = check(fields, application)
+    assert "R-APP-05" not in _rule_ids(issues)
+
+
 def test_origin_mismatch():
     issues = check(_fields("wine_mode_a_R_APP_05.json"), _app("mesa-verde-chardonnay-synth-mode-a-R-APP-05.json"))
     app_issues = [i for i in issues if i.rule_id == "R-APP-05"]
     assert len(app_issues) == 1
     assert app_issues[0].severity == "warning"
+
+
+def test_origin_iso2_country_does_not_affect_r_app_05():
+    fields = _fields("wine_mode_a_R_APP_05.json")
+    with_iso = ApplicationFields(
+        origin_as_stated="California",
+        origin_iso2_country="US",
+    )
+    without_iso = ApplicationFields(origin_as_stated="California")
+    issues_with = [i for i in check(fields, with_iso) if i.rule_id == "R-APP-05"]
+    issues_without = [i for i in check(fields, without_iso) if i.rule_id == "R-APP-05"]
+    assert len(issues_with) == 1
+    assert len(issues_without) == 1
+
+
+def test_provided_field_names_excludes_origin_iso2_country():
+    application = ApplicationFields(
+        brand_name="Mesa Verde Chardonnay",
+        origin_as_stated="California",
+        origin_iso2_country="US",
+    )
+    names = provided_field_names(application)
+    assert "origin_as_stated" in names
+    assert "origin_iso2_country" not in names
 
 
 def test_net_contents_mismatch():

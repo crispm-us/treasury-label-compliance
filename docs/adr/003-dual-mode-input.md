@@ -3,7 +3,7 @@
 Date: 2026-06-09
 Status: Accepted — **partial in prototype**
 
-> **Prototype status:** Mode A application-matching is implemented end-to-end: optional `application` JSON on `POST /v1/check` compares extracted label fields against declared application values (`application_checker.py`, R-APP-01–R-APP-05). The UI exposes Mode A via a collapsible toggle with a catalog dropdown (`GET /v1/applications`). Application stubs live in `test-labels/applications/` (9 synthetic + 3 real-label). Full COLA on-file integration is deferred. Mode B remains the default when `application` is omitted. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
+> **Prototype status:** Mode A application-matching is implemented end-to-end: optional `application` JSON on `POST /v1/check` compares extracted label fields against declared application values (`application_checker.py`, R-APP-01–R-APP-05 — origin checked as declared string via `origin_as_stated`; ISO country code carried as metadata in `origin_iso2_country`, not validated at runtime). The UI exposes Mode A via a collapsible toggle with a catalog dropdown (`GET /v1/applications`). Application stubs live in `test-labels/applications/` (9 synthetic + 3 real-label). Full COLA on-file integration is deferred. Mode B remains the default when `application` is omitted. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
 
 ## Context
 

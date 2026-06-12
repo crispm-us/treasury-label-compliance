@@ -1,9 +1,10 @@
 {
-  "_comment": "Application for Mesa Verde Chardonnay — R-APP-05 fixture. Label shows 'Sonoma County' appellation but application declares 'California'. Origin mismatch.",
+  "_comment": "Application for Mesa Verde Chardonnay — R-APP-05 fixture. Label shows 'Sonoma County' but application declares origin_as_stated 'California'. origin_iso2_country asserts US.",
   "brand_name": "Mesa Verde Chardonnay",
   "class_type": "Chardonnay",
   "abv_pct": 13.5,
   "net_contents": "750 mL",
-  "origin": "California",
+  "origin_as_stated": "California",
+  "origin_iso2_country": "US",
   "gws_required": true
 }

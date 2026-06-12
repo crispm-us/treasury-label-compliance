@@ -1,9 +1,10 @@
 {
-  "_comment": "Application for Harbor Bay Lager — R-APP-01 fixture. Label shows 'Harbor Point Lager' but application says 'Harbor Bay Lager'. Brand name mismatch.",
+  "_comment": "Application for Harbor Bay Lager — R-APP-01 fixture. Brand name mismatch only; origin_as_stated matches label.",
   "brand_name": "Harbor Bay Lager",
   "class_type": "American Lager",
   "abv_pct": 5.0,
   "net_contents": "12 fl oz",
-  "origin": "United States",
+  "origin_as_stated": "San Francisco, California",
+  "origin_iso2_country": "US",
   "gws_required": true
 }

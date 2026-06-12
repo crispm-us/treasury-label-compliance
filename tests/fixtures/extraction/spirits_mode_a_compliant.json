@@ -15,7 +15,7 @@
     "net_contents_us":      {"value": null,                              "confidence": "not_found"},
     "bottler_name":         {"value": "Canyon Ridge Distillery, LLC",    "confidence": "high"},
     "bottler_address":      {"value": "300 Barrel House Rd., Lawrenceburg, KY 40342, USA", "confidence": "high"},
-    "country_of_origin":    {"value": "United States",                   "confidence": "high"},
+    "country_of_origin":    {"value": "Lawrenceburg, Kentucky",          "confidence": "high"},
     "gws_present":          {"value": true,                              "confidence": "high"},
     "gws_header":           {"value": "GOVERNMENT WARNING:",             "confidence": "high"},
     "gws_body":             {"value": "(1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.", "confidence": "high"},
