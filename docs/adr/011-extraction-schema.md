@@ -64,7 +64,7 @@ All 18 fields:
 | `net_contents_us` | string | E.g., `"12 FL OZ"`. Null if not printed. |
 | `bottler_name` | string | Legal name of the bottler/packer/importer. |
 | `bottler_address` | string | Full address as printed. |
-| `country_of_origin` | string | Required for imported products. |
+| `country_of_origin` | string | The geographic origin statement as presented on the label face — not derived from the bottler address. Preserve the text exactly as shown, including sub-country specificity (e.g., `"California"`, `"Lawrenceburg, Kentucky"`, `"American"`). Strip declarative phrases: `"Product of France"` → `"France"`, `"Imported from Mexico"` → `"Mexico"`. Used by R-APP-05 to match against `origin_as_stated` in the COLA application. **Not** restricted to country names. See deferred rename note below. |
 | `gws_present` | boolean | `true` if any government warning statement is visible. |
 | `gws_header` | string | Verbatim header text, e.g., `"GOVERNMENT WARNING:"`. |
 | `gws_body` | string | Verbatim body text. |
@@ -227,6 +227,18 @@ The extraction prompt specifies that every field must be a `{"value": ..., "conf
 ### Quality metric
 
 The `schema_violations` count in the API response and audit log is a model quality control signal. A count above 0 on a compliant verdict means the compliance result was produced with degraded extraction data. If a specific model consistently violates the schema on certain field types, the audit log provides field-level and model-level attribution to guide prompt iteration.
+
+---
+
+## Deferred: Rename `country_of_origin` to `origin_statement`
+
+The field name `country_of_origin` encodes a granularity assumption ("country") that the rule engine does not require and that the extraction prompt actively works against. The actual intent is closer to `origin_statement` or `geographic_origin_claim` — the origin text as it appears on the label, regardless of geographic level.
+
+**Why this matters:** models have a strong prior to collapse this field to nation-states because the name implies country-level specificity. The extraction prompt overrides this with explicit source-attribution instructions (see `backend/app/prompts/extraction.py`), but the field name remains a latent bias risk across model versions.
+
+**Blast radius of a rename:** `ExtractionFields` model, `compliance_checker.py`, `application_checker.py` (one reference to `extracted.country_of_origin`), all extraction fixtures, all tests that assert on the field name, and the API response schema (breaking change for any external consumers of `/v1/check`). Estimated ~25 lines of code across 8–10 files.
+
+**Decision deferred** because: (1) the prompt-level fix is in place; (2) the rename is a breaking API change requiring a schema version bump and changelog entry; (3) no external consumers exist yet in the prototype. Revisit before the first production release. At that point rename to `origin_statement` and increment `schema_version` to `"1.1"`.
 
 ---
 

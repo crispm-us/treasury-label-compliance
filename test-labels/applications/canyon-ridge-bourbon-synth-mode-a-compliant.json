@@ -1,10 +1,10 @@
 {
-  "_comment": "Application for Canyon Ridge Bourbon — compliant Mode A fixture. Label prints 'Lawrenceburg, Kentucky'; origin_iso2_country asserts US.",
+  "_comment": "Application for Canyon Ridge Bourbon — compliant Mode A fixture. Model extracts 'Kentucky' from class/type text on label face; origin_iso2_country asserts US. 'Lawrenceburg, Kentucky' is in the bottler address; label face states 'Kentucky' as the geographic origin.",
   "brand_name": "Canyon Ridge Bourbon",
   "class_type": "Straight Bourbon Whiskey",
   "abv_pct": 45.0,
   "net_contents": "750 mL",
-  "origin_as_stated": "Lawrenceburg, Kentucky",
+  "origin_as_stated": "Kentucky",
   "origin_iso2_country": "US",
   "gws_required": true
 }
