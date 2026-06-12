@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import hashlib
+import json
 import secrets
 import uuid
 from datetime import datetime, timezone
@@ -418,6 +419,43 @@ async def version() -> dict:
         "environment": os.getenv("RAILWAY_ENVIRONMENT_NAME", "dev"),
         "branch":      os.getenv("RAILWAY_GIT_BRANCH", ""),
     }
+
+
+# ---------------------------------------------------------------------------
+# Mode A demo catalog
+# ---------------------------------------------------------------------------
+
+class ApplicationEntry(BaseModel):
+    id:     str
+    label:  str
+    fields: dict
+
+_APP_CATALOG = [
+    ("titos-vodka",                                  "Tito's Handmade Vodka (spirits)"),
+    ("sierra-nevada-pale-ale",                       "Sierra Nevada Pale Ale (beer)"),
+    ("angry-orchard-iceman",                         "Angry Orchard Iceman (wine/cider)"),
+    ("canyon-ridge-bourbon-synth-mode-a-compliant",  "Canyon Ridge Bourbon — synthetic (spirits)"),
+    ("harbor-bay-lager-synth-mode-a-compliant",      "Harbor Bay Lager — synthetic (beer)"),
+    ("mesa-verde-chardonnay-synth-mode-a-compliant", "Mesa Verde Chardonnay — synthetic (wine)"),
+]
+
+_APPS_DIR = Path(__file__).resolve().parent.parent.parent / "test-labels" / "applications"
+
+
+@app.get("/v1/applications", response_model=list[ApplicationEntry])
+async def list_applications() -> list[ApplicationEntry]:
+    """Return the curated COLA stub catalog for Mode A demo use.
+
+    Demo-only — reads from test-labels/applications/; returns partial catalog if files are absent.
+    """
+    entries: list[ApplicationEntry] = []
+    for id_, label in _APP_CATALOG:
+        path = _APPS_DIR / f"{id_}.json"
+        if path.exists():
+            raw = json.loads(path.read_text())
+            raw.pop("_comment", None)
+            entries.append(ApplicationEntry(id=id_, label=label, fields=raw))
+    return entries
 
 
 # ---------------------------------------------------------------------------

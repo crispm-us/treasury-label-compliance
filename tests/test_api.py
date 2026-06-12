@@ -525,6 +525,21 @@ def test_readable_merge_uses_either_panel(client):
 # Mode A — application-matching
 # ---------------------------------------------------------------------------
 
+def test_get_applications_returns_catalog(client):
+    resp = client.get("/v1/applications")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 6
+    ids = [e["id"] for e in data]
+    assert "titos-vodka" in ids
+    assert "sierra-nevada-pale-ale" in ids
+    assert "angry-orchard-iceman" in ids
+    assert not any("R-APP" in e["id"] for e in data)
+    for entry in data:
+        assert {"id", "label", "fields"} <= entry.keys()
+        assert "_comment" not in entry["fields"]
+
+
 def test_mode_a_brand_mismatch(client):
     application = json.dumps({
         "brand_name": "Harbor Bay Lager",

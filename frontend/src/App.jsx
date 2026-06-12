@@ -124,6 +124,11 @@ function ResultPanel({ result }) {
             partial verification
           </span>
         )}
+        {result.mode === 'application_match' && (
+          <span className="rounded-md bg-blue-100 border border-blue-200 px-2 py-0.5 text-xs font-medium text-blue-700">
+            application match
+          </span>
+        )}
         {result.beverage_class && (
           <span className="ml-auto rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
             {result.beverage_class}
@@ -149,7 +154,11 @@ function ResultPanel({ result }) {
               </thead>
               <tbody>
                 {result.issues.map((issue, i) => (
-                  <tr key={i} className="border-b border-gray-50 last:border-0">
+                  <tr key={i} className={
+                    issue.rule_id.startsWith('R-APP-')
+                      ? 'border-b border-blue-50 last:border-0 bg-blue-50/40'
+                      : 'border-b border-gray-50 last:border-0'
+                  }>
                     <td className="py-2 pr-4 font-mono text-gray-700 whitespace-nowrap">{issue.rule_id}</td>
                     <td className="py-2 pr-4">
                       <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${SEVERITY_BADGE[issue.severity] ?? SEVERITY_BADGE.warning}`}>
@@ -209,12 +218,19 @@ export default function App() {
   const [error,     setError]     = useState(null)
   const [uploadKey, setUploadKey] = useState(0)   // increment to reset UploadZones
   const [version,   setVersion]   = useState(null)
+  const [colaEnabled, setColaEnabled] = useState(false)
+  const [colaId,      setColaId]      = useState('')
+  const [catalog,     setCatalog]     = useState([])
 
-  // Fetch version info once on mount
+  // Fetch version info and COLA catalog once on mount
   useEffect(() => {
     fetch('/version')
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setVersion(data) })
+      .catch(() => {})
+    fetch('/v1/applications')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (data.length) setCatalog(data) })
       .catch(() => {})
   }, [])
 
@@ -227,6 +243,10 @@ export default function App() {
     const formData = new FormData()
     formData.append('front', front)
     if (back) formData.append('back', back)
+    if (colaEnabled && colaId) {
+      const entry = catalog.find(e => e.id === colaId)
+      if (entry) formData.append('application', JSON.stringify(entry.fields))
+    }
 
     const headers = {}
     if (apiKey.trim()) headers['X-API-Key'] = apiKey.trim()
@@ -292,6 +312,44 @@ export default function App() {
           </div>
         </div>
 
+        {/* COLA compare toggle */}
+        <div className="mt-4 rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <button
+            type="button"
+            onClick={() => { setColaEnabled(v => !v); setColaId('') }}
+            className="w-full flex items-center gap-2 px-4 py-3 text-left"
+          >
+            <span className="text-sm font-medium text-gray-700">
+              Compare against COLA application stub
+            </span>
+            <span className="text-xs text-gray-400 font-normal">Mode A demo</span>
+            <span className={`ml-auto inline-flex h-5 w-8 items-center rounded-full transition-colors ${colaEnabled ? 'bg-blue-500' : 'bg-gray-200'}`}>
+              <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${colaEnabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </span>
+          </button>
+
+          {colaEnabled && (
+            <div className="px-4 pb-4 border-t border-gray-100">
+              <label className="block text-xs font-medium text-gray-500 mt-3 mb-1.5">
+                COLA stub to compare against
+              </label>
+              <select
+                value={colaId}
+                onChange={e => setColaId(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
+              >
+                <option value="">— select a COLA stub —</option>
+                {catalog.map(e => (
+                  <option key={e.id} value={e.id}>{e.label}</option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-gray-400">
+                Label fields will be compared against the selected stub. Mismatches appear as R-APP-* issues.
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* API key + submit */}
         <div className="mt-4 flex gap-3 items-end">
           <div className="flex-1">
@@ -310,7 +368,7 @@ export default function App() {
           </div>
           <button
             onClick={handleSubmit}
-            disabled={!front || loading}
+            disabled={!front || loading || (colaEnabled && !colaId)}
             className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
           >
             {loading ? 'Checking…' : 'Check label'}
