@@ -103,6 +103,16 @@ Public registry shows metadata only; label images require a TTB industry account
 **How should I submit real bottle photos?**
 Front = brand/class face when possible. Back = GWS and bottler info. Slots are semantic, not geometric — swapped panels still merge correctly. Multi-face cans may need choosing two of three faces; the missed face yields `not_found` → often `UNVERIFIABLE` rather than false `NONCOMPLIANT`. See [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md).
 
+**What if my label has more than two panels — for example a cylindrical can where the Government Warning is on a dedicated face?**
+
+The API accepts at most two images (`front` and `back`). For a three-panel container, two approaches work:
+
+**Option A — stitch all three panels into `front` (simplest).** Combine all panels into a single image and submit as the `front` field. The model reads all visible text in one call. Drawbacks: each panel gets proportionally less resolution; the merge layer is bypassed.
+
+**Option B — submit `front` + stitched `back` (recommended).** Submit the main front face as `front`, and stitch the remaining two panels side-by-side as `back`. The system runs both extractions in parallel and merges results field-by-field, taking the highest-confidence value per field. This preserves better per-panel resolution and uses the merge layer to resolve field conflicts. A utility script (`scripts/stitch-labels.py`) is included; for custom panel pairings, any image editor or Pillow one-liner works.
+
+Both options are subject to the 10 MB per-file limit. The native fix — N-panel support where each panel is a separate named file — is documented in [ADR-012](adr/012-multi-panel-submission.md) and deferred.
+
 ---
 
 ## 4. Technical readers — developers, integrators, and architects
