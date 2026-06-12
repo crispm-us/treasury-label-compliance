@@ -62,6 +62,6 @@ Several ADRs (003, 005, 007) describe designs accepted during planning but not i
 
 **Test label corpus:** `../test-labels/README.md`
 
-**Design evolution / interview narrative:** `project-log.md` (sanitize before public push — see DEPLOYMENT_CHECKLIST §1)
+**Design evolution / interview narrative:** [docs/adr/](adr/) (decision rationale), [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) (built vs. deferred), [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md) (real-label smoke matrix)
 
 **Questions from any audience:** `FAQ.md` — Part I for users and integrators, Part II for evaluators and interviewers

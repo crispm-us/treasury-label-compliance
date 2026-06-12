@@ -45,6 +45,6 @@ Mode A application-matching (ADR-003) is partially implemented — API (`applica
 
 ---
 
-## Files that are internal / unsanitized
+## Sensitive paths — do not commit
 
-`docs/project-log.md` contains internal workflow notes and is not sanitized for public consumption. Do not cite its contents as representative of deliverable quality.
+`audit_logs/` contains extracted label text from live compliance checks — covered by `.gitignore`. Treat as sensitive if present locally.

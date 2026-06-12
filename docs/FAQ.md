@@ -197,7 +197,7 @@ Yes for all tested configurations. Single-panel Flash-Lite ~2.5 s; two-panel par
 Strict separation of AI extraction (Layer 1) from deterministic compliance checking (Layer 2). Compliance logic is auditable, version-controlled, and unit-testable independent of the model. Everything else — multi-provider fallback, audit logging, rule files as repo artifacts — supports that separation.
 
 **Where is design thinking documented?**
-[docs/adr/](adr/) — decisions with explicit trade-offs and alternatives rejected. [docs/project-log.md](project-log.md) — stakeholder inputs, iteration, debugging (sanitize before public push per [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)).
+[docs/adr/](adr/) — decisions with explicit trade-offs and alternatives rejected. Real-label testing findings, iteration notes, and smoke-test results are in [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md), [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md), and Part II of this FAQ.
 
 **How do I quickly assess architectural completeness?**
 Read [docs/adr/README.md](adr/README.md) status table alongside [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md). Built: two-layer pipeline (009), extraction schema (011), FastAPI (004), Railway target (006), partial audit (010), partial preprocessing (008), partial UI — React+Vite+Tailwind (005), partial Mode A application-matching (003). Not built: batch (007). Mode A full COLA on-file integration remains deferred.
@@ -252,7 +252,7 @@ EXIF/rotation handling (Glenfiddich, Glenlivet); mixed-case GWS headers on other
 Several products are confirmed (Tito's, Henninger, Stiegl, Heineken, Ron Ron, Mike's Harder, etc.); others marked `unverified*` pending smoke-test runs. Checklist tracks progress.
 
 **Why include TTB COLA research if images aren't public?**
-Shows domain research: TTB submits one image per panel (aligns with two-panel API design); COLA images require industry login (explains why corpus uses BAM, Open Food Facts, and own photos). Recorded in [project-log.md](project-log.md).
+Shows domain research: TTB submits one image per panel (aligns with two-panel API design); COLA images require industry login (explains why corpus uses BAM, Open Food Facts, and own photos). Documented in [ADR-012](adr/012-multi-panel-submission.md) and [test-labels/README.md](../test-labels/README.md).
 
 **What scripts should an evaluator run?**
 `uv run --with pytest pytest tests/ -v` (no keys); `bash scripts/smoke-test.sh` (needs running server + key); `./scripts/benchmark-latency.sh` (optional, needs keys).

@@ -9,13 +9,8 @@ Pre-flight steps before making the repository public and deploying to Railway.
 - [x] **Delete internal dev notes:** `git rm docs/dev-environment-notes.md`
   ✓ Done — file removed; confirmed clean via `git ls-files docs/`.
 
-- [ ] **Handle `docs/project-log.md` before public push:**
-  The file is being committed during development for personal reference. Before making the repo public, decide: (a) include it (sanitize content, then publish), or (b) strip it entirely. If stripping, a plain `git rm` is not sufficient — the file exists in prior commits. Remove it from full history with:
-  ```bash
-  git filter-repo --path docs/project-log.md --invert-paths
-  git push --force
-  ```
-  `git filter-repo` must be installed (`pip install git-filter-repo` or `brew install git-filter-repo`). Run this on Zulu immediately before making the repo public, not during development.
+- [x] **Remove internal development log from repository history:**
+  ✓ Done — private workflow log stripped from git history before public push.
 
 - [x] **Verify `.gitignore` covers all sensitive paths:**
   ✓ Done — `audit_logs/`, `.env`, `.env.*` confirmed in `.gitignore`; `uv.lock` uncommented and committed.
@@ -245,13 +240,13 @@ For each product below, the "front-only" submission exercises the path where com
 - [x] Run remaining `unverified*` rows — Budweiser, Delirium Tremens bottle, Auchere Sancerre, Bulliat Bibine confirmed (2026-06-12 via web UI)
 - [x] Run remaining `unverified*` rows: Sierra Nevada, Baci di Sangiovese, Brumes Tour Blanche confirmed (2026-06-12 via web UI) — all unverified* rows complete
 - [x] Jack Daniel's GWS photo — deferred; domestic JD removed from active test matrix pending a clean GWS shot
-- [x] Document smoke-test results and model anomalies (Mike's Harder abv_pct hallucination, Glenlivet UNVERIFIABLE) — completed in `docs/project-log.md`. Note: `docs/project-log.md` is stripped from git history before the public push (see §1), so this record is internal-only.
+- [x] Document smoke-test results and model anomalies (Mike's Harder abv_pct hallucination, Glenlivet UNVERIFIABLE) — captured in [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md), [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md), and [FAQ.md Part II §5–6](FAQ.md).
 
 ---
 
 ## 7. Interview submission notes
 
-- `docs/project-log.md` (sanitized) — shows design thinking, iteration, and debugging process.
-- `docs/adr/` — shows architectural decision-making with explicit trade-off reasoning.
+- `docs/adr/` — architectural decision-making with explicit trade-off reasoning.
+- [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md) and [docs/ui-screenshots/](ui-screenshots/) — real-label smoke test matrix and browser verification artifacts.
 - `IMPLEMENTATION_STATUS.md` — honest scoping: what is built vs. deliberately deferred.
 - The two-layer architecture (AI extraction + deterministic checker) is the core design insight worth explaining in the interview.
