@@ -245,7 +245,7 @@ For each product below, the "front-only" submission exercises the path where com
 - [x] Run remaining `unverified*` rows — Budweiser, Delirium Tremens bottle, Auchere Sancerre, Bulliat Bibine confirmed (2026-06-12 via web UI)
 - [x] Run remaining `unverified*` rows: Sierra Nevada, Baci di Sangiovese, Brumes Tour Blanche confirmed (2026-06-12 via web UI) — all unverified* rows complete
 - [x] Jack Daniel's GWS photo — deferred; domestic JD removed from active test matrix pending a clean GWS shot
-- [ ] Document smoke-test results and model anomalies (Mike's Harder abv_pct hallucination, Glenlivet UNVERIFIABLE) in `docs/project-log.md`
+- [x] Document smoke-test results and model anomalies (Mike's Harder abv_pct hallucination, Glenlivet UNVERIFIABLE) — completed in `docs/project-log.md`. Note: `docs/project-log.md` is stripped from git history before the public push (see §1), so this record is internal-only.
 
 ---
 

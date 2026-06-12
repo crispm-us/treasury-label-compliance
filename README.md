@@ -19,7 +19,7 @@ POST /v1/check  ──►  Layer 1: AI extraction  ──►  Layer 2: Determini
 
 **Layer 1** sends the label image to a configurable vision model via [LiteLLM](https://github.com/BerriAI/litellm). It returns a typed JSON object with 18 fields (brand name, ABV, Government Warning Statement text, etc.), each with a confidence level (`high | low | not_found`). A sequential fallback chain (`EXTRACTION_FALLBACK_MODELS`) retries on provider errors before giving up. This layer never makes a compliance judgment.
 
-**Layer 2** applies deterministic rules against the extracted fields. Every issue maps to a rule ID (e.g. `R-GW-01`, `R-DS-03`) documented in [`docs/rules/`](docs/rules/). This layer contains no AI calls and is fully unit-testable with fixture JSON.
+**Layer 2** applies deterministic rules against the extracted fields. Every issue maps to a rule ID (e.g. `R-GW-01`, `R-DS-03`) documented in [`docs/rules/`](docs/rules/) (the cross-field `R-META-*` and application-matching `R-APP-*` rule families are implemented in code and documented in [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md), not in `docs/rules/`). This layer contains no AI calls and is fully unit-testable with fixture JSON.
 
 This separation means the compliance logic can be audited, version-controlled, and tested independently of the model — important for a regulatory context.
 
@@ -235,7 +235,7 @@ See [`docs/README.md`](docs/README.md) for a reading-order guide and audience ma
 
 - [`AGENTS.md`](AGENTS.md) — AI-readable orientation guide for agents scanning this repository
 - [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) — What is built vs. deliberately deferred; read this before the ADRs
-- [`docs/adr/`](docs/adr/) — Architecture Decision Records (ADR-001 through ADR-011); see [`docs/adr/README.md`](docs/adr/README.md) for status of each
+- [`docs/adr/`](docs/adr/) — Architecture Decision Records (ADR-001 through ADR-012); see [`docs/adr/README.md`](docs/adr/README.md) for status of each
 - [`docs/rules/`](docs/rules/) — TTB rule reference by beverage class
 - [`docs/requirements-analysis.md`](docs/requirements-analysis.md) — Original stakeholder spec (historical; many FRs deferred)
 - [`docs/latency-benchmarks.md`](docs/latency-benchmarks.md) — Observed extraction latency across four models; benchmark script usage

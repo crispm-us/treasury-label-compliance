@@ -92,6 +92,8 @@ Schema violation tracking (see ADR-011 §Layer 1 Schema Violations):
 
 New cross-field rule applied after all beverage-class checks: if `abv_pct` and `abv_text` are both present with usable confidence, the numeric value parsed from `abv_text` is compared with `abv_pct`. A discrepancy > 0.2% fires R-META-02 at warning severity. Motivated by Mike's Harder hallucination: `abv_pct=5.0` at high confidence while `abv_text="8% ALC. BY VOL."` correctly read 8%.
 
+The hallucination was internally self-consistent: the model also returned `proof=10.0`, which correctly equals 2 × 5.0. The proof-consistency check therefore passed, and the ABV range check passed (5% is plausible for a flavored malt beverage). Only cross-referencing `abv_pct` against the independently-read `abv_text` ("8%") exposes the contradiction. This is why R-META-02 cross-checks two fields rather than validating either in isolation.
+
 ### Mode A application-matching (ADR-003) — partial
 Regulation checks (Layer 2) plus application-match checks when optional `application` JSON is supplied on `POST /v1/check`. Full COLA integration (lookup against TTB on-file records) remains out of scope.
 

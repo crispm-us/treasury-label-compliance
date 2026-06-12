@@ -15,12 +15,22 @@ Schema of each line
   "timestamp":             string (ISO-8601 UTC),
   "extraction_model":      string,
   "extraction_duration_ms": number,
+  "usage":                 null | { "input_tokens": int, "output_tokens": int },
   "model_error":           null | { "status_code": int|null, "message": string },
   "extraction_result":     null | <full ExtractionResult dict>,
   "verdict":               string,
   "beverage_class":        string | null,
   "issues": [
     { "rule_id": string, "severity": string, "field": string }
+  ],
+  "front_filename":        string | null,
+  "back_filename":         string | null,
+  "front_label_ref":       string | null,
+  "back_label_ref":        string | null,
+  "front_sha256":          string | null,
+  "back_sha256":           string | null,
+  "schema_violations": [
+    { "field": string, "type_got": string, "value_preview": string, "model": string }
   ]
 }
 

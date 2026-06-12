@@ -14,6 +14,8 @@ Real-label testing surfaced a concrete gap: cylindrical cans with three distinct
 
 This ADR records the design analysis for extending to three or more panels. No implementation decision has been made; this documents what was assessed, what the tradeoffs are, and what the implementation path would look like if the decision is taken.
 
+> **TTB submission model (research finding).** A COLA application (TTB Form 5100.31) covers a single container but attaches one image per label panel — front, back, neck, closure — each as a separate file and a separate record in COLAs Online. This one-image-per-panel model is the regulatory basis for the `front`/`back` panel design here and for the N-panel path described in this ADR. The "combined" side-by-side stitch used in some test fixtures is a prototype convenience, not a TTB artifact. Label images in the public COLA registry are not downloadable without an industry OAuth login, which is why the test corpus uses Open Food Facts, Wikimedia, and original photographs.
+
 ---
 
 ## What the current two-panel design relies on

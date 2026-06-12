@@ -33,6 +33,8 @@ To run an adversarial check, paste the relevant rules file and `compliance_check
 | `wine.md` | Wine ≥7% ABV | 27 CFR Part 4 |
 | `beer-malt.md` | Malt beverages and beer | 27 CFR Part 7 |
 
+These files cover the CFR regulatory rules (`R-GW-*`, `R-DS-*`, `R-MB-*`, `R-WN-*`). The cross-field validation rules (`R-META-*`) and Mode A application-matching rules (`R-APP-*`) are not CFR-derived; they are implemented in `compliance_checker.py` and `application_checker.py` and documented in `IMPLEMENTATION_STATUS.md` and `docs/FAQ.md` rather than here.
+
 ## Note on Regulatory Currency
 
 These files were compiled in June 2026. TTB regulations are updated periodically. The authoritative current text is always at:
