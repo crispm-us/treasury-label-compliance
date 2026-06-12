@@ -37,15 +37,32 @@ Pre-flight steps before making the repository public and deploying to Railway.
 
 ## 3. Railway deployment
 
-- [ ] **Set `API_KEY` in the Railway environment dashboard** before sharing the deployment URL.
+- [x] **Set `API_KEY` in the Railway environment dashboard** before sharing the deployment URL.
   Any non-empty value requires `X-API-Key: <value>` on every `POST /v1/check` request.
   Share the key only with yourself and the hiring manager/team.
+  ✓ Done — 401 returned on missing key (confirmed 2026-06-12).
 
-- [ ] **Set `ANTHROPIC_API_KEY`** in the Railway environment dashboard.
+- [x] **Set all provider API keys** (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) in the Railway environment dashboard.
+  ✓ Done.
 
-- [ ] **Confirm `AUDIT_ENABLED=true`** in the Railway environment (default; no action needed unless overridden).
+- [x] **Set `AUDIT_ENABLED=false`** in the Railway environment — Railway has an ephemeral filesystem; audit logs written to `audit_logs/` are lost on every redeploy.
+  ✓ Done — confirmed via `healthz`: `{"status":"ok","audit_enabled":false}`.
 
-- [ ] **Smoke-test the live endpoint** using the commands in §4 below before sharing the URL.
+- [x] **Set `EXTRACTION_MODEL` and `EXTRACTION_FALLBACK_MODELS`** in the Railway environment.
+  ✓ Done — Flash-Lite primary, Haiku fallback-1, gpt-5.4-nano fallback-2.
+
+- [x] **Smoke-test the live endpoint.**
+  ✓ Done — see §4 below.
+
+### Deployment record
+
+| Field | Value |
+|---|---|
+| URL | `https://web-production-b6163.up.railway.app` |
+| Project | `pleasant-love` / `production` |
+| Python | 3.13.14 (Railway Nixpacks auto-detected) |
+| Region | US West |
+| Deployed | 2026-06-12 |
 
 ---
 
@@ -68,6 +85,14 @@ curl -X POST https://<URL>/v1/check \
   -F "front=@test-labels/spirits/blue-ridge-rye-synth-front.jpg" \
   -F "back=@test-labels/spirits/blue-ridge-rye-synth-back.jpg"
 ```
+
+### Results (2026-06-12)
+
+| Test | Result |
+|---|---|
+| `GET /healthz` | `{"status":"ok","audit_enabled":false}` ✓ |
+| `POST /v1/check` — no API key | 401 ✓ |
+| Glenfiddich 12 two-panel (spirits) | UNVERIFIABLE — R-GW-02 warning (rotated GWS; expected) ✓ |
 
 ---
 
