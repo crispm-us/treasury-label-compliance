@@ -16,10 +16,12 @@ something to audit-log and can decide independently whether to retry.
 Two-panel strategy
 ------------------
 When both front and back images are provided, each is extracted independently
-with the same prompt (the panel_hint is advisory — written to the prompt so the
-model can orient itself, but not used in any branching logic).  The two dicts
-are then merged field-by-field: highest confidence wins; ties go to the
-non-null value.  This tolerates flipped submissions naturally.  See ADR-011.
+in parallel (ThreadPoolExecutor) so wall-clock latency is ~one model call rather
+than two sequential ones.  The same prompt is used for both panels (panel_hint
+is advisory — written to the prompt so the model can orient itself, but not used
+in any branching logic).  The two dicts are then merged field-by-field: highest
+confidence wins; ties go to the non-null value.  This tolerates flipped
+submissions naturally.  See ADR-011.
 
 Fallback strategy
 -----------------
@@ -33,6 +35,7 @@ from __future__ import annotations
 import base64
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
 
@@ -443,34 +446,52 @@ def extract(
             last_error = err
         return None, last_error, 0, 0
 
-    front_dict, err, front_in, front_out = _extract_with_fallback(
-        front_bytes, front_media_type, "front"
-    )
-    if err:
-        return None, err, (time.monotonic() - t0) * 1000, None, []
-
-    total_in, total_out = front_in, front_out
-
-    # Collect schema violations before sanitization (need the raw non-dict values)
-    front_model = front_dict.get("extraction_model", model)
-    all_violations: list[dict] = _collect_schema_violations(front_dict.get("fields", {}), front_model)
-    front_dict = _sanitize_fields(front_dict)  # make single-panel path safe for from_dict
-
     if back_bytes and back_media_type:
-        back_dict, err, back_in, back_out = _extract_with_fallback(
-            back_bytes, back_media_type, "back"
+        # Per-call executor is fine at prototype scale; a module-level pool would
+        # be the production upgrade path under sustained concurrent load.
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            front_fut = pool.submit(
+                _extract_with_fallback, front_bytes, front_media_type, "front"
+            )
+            back_fut = pool.submit(
+                _extract_with_fallback, back_bytes, back_media_type, "back"
+            )
+            # Join both futures before error handling — never return while a
+            # thread is still running.
+            front_dict, front_err, front_in, front_out = front_fut.result()
+            back_dict, back_err, back_in, back_out = back_fut.result()
+
+        if front_err:
+            # Both threads were started concurrently; we do not cancel the back
+            # thread on front hard-fail — in-flight HTTP calls cannot be aborted
+            # cleanly, and back may have already billed tokens.  Front error wins.
+            return None, front_err, (time.monotonic() - t0) * 1000, None, []
+
+        if back_err:
+            partial_usage = {"input_tokens": front_in, "output_tokens": front_out}
+            return None, back_err, (time.monotonic() - t0) * 1000, partial_usage, []
+
+        total_in, total_out = front_in + back_in, front_out + back_out
+        front_model = front_dict.get("extraction_model", model)
+        all_violations: list[dict] = _collect_schema_violations(
+            front_dict.get("fields", {}), front_model
         )
-        if err:
-            # Front tokens were billed; include them in partial usage for audit.
-            partial_usage = {"input_tokens": total_in, "output_tokens": total_out}
-            return None, err, (time.monotonic() - t0) * 1000, partial_usage, []
-        total_in  += back_in
-        total_out += back_out
+        front_dict = _sanitize_fields(front_dict)
         back_model = back_dict.get("extraction_model", model)
         all_violations += _collect_schema_violations(back_dict.get("fields", {}), back_model)
         back_dict = _sanitize_fields(back_dict)
         merged = _merge_panels(front_dict, back_dict)
     else:
+        front_dict, err, front_in, front_out = _extract_with_fallback(
+            front_bytes, front_media_type, "front"
+        )
+        if err:
+            return None, err, (time.monotonic() - t0) * 1000, None, []
+
+        total_in, total_out = front_in, front_out
+        front_model = front_dict.get("extraction_model", model)
+        all_violations = _collect_schema_violations(front_dict.get("fields", {}), front_model)
+        front_dict = _sanitize_fields(front_dict)
         merged = front_dict
 
     duration_ms = (time.monotonic() - t0) * 1000

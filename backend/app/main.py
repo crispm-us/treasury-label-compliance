@@ -14,6 +14,7 @@ Docs (auto-generated):
 """
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import hashlib
 import secrets
@@ -253,7 +254,8 @@ async def check_label(
         back_label_ref = None
 
     # --- Layer 1: extraction ---------------------------------------------------
-    result, model_error, duration_ms, usage, schema_violations = extract(
+    result, model_error, duration_ms, usage, schema_violations = await asyncio.to_thread(
+        extract,
         front_bytes=front_bytes,
         front_media_type=front_media_type,
         back_bytes=back_bytes,

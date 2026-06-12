@@ -10,6 +10,7 @@ Run:
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
@@ -212,10 +213,9 @@ def test_two_panel_tokens_are_summed():
     def mock_single(img_bytes, media_type, panel_hint, model):
         nonlocal call_count
         call_count += 1
-        if call_count == 1:   # front
+        if panel_hint == "front":
             return (_fixture_dict("beer_compliant.json"), None, FRONT_IN, FRONT_OUT)
-        else:                  # back
-            return (_fixture_dict("beer_compliant.json"), None, BACK_IN, BACK_OUT)
+        return (_fixture_dict("beer_compliant.json"), None, BACK_IN, BACK_OUT)
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
         result, error, _, usage, _violations = extract(
@@ -229,7 +229,7 @@ def test_two_panel_tokens_are_summed():
 
     assert error is None
     assert result is not None
-    assert call_count == 2
+    assert call_count == 2  # both panels invoked; order is non-deterministic with threads
     assert usage is not None
     assert usage["input_tokens"]  == FRONT_IN  + BACK_IN
     assert usage["output_tokens"] == FRONT_OUT + BACK_OUT
@@ -243,15 +243,10 @@ def test_back_panel_failure_returns_partial_usage():
     """
     FRONT_IN, FRONT_OUT = 200, 80
 
-    call_count = 0
-
     def mock_single(img_bytes, media_type, panel_hint, model):
-        nonlocal call_count
-        call_count += 1
-        if call_count == 1:   # front succeeds
+        if panel_hint == "front":
             return (_fixture_dict("beer_compliant.json"), None, FRONT_IN, FRONT_OUT)
-        else:                  # back fails
-            return (None, ExtractionError(status_code=429, message="rate limited"), 0, 0)
+        return (None, ExtractionError(status_code=429, message="rate limited"), 0, 0)
 
     with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
         result, error, _, usage, _violations = extract(
@@ -269,6 +264,52 @@ def test_back_panel_failure_returns_partial_usage():
     assert usage is not None, "front tokens must not be discarded on back-panel failure"
     assert usage["input_tokens"]  == FRONT_IN
     assert usage["output_tokens"] == FRONT_OUT
+
+
+def test_two_panel_extracts_run_concurrently():
+    """Two-panel extraction must run both panels in parallel, not sequentially."""
+    _SLEEP = 0.1
+
+    def mock_single(img_bytes, media_type, panel_hint, model):
+        time.sleep(_SLEEP)
+        return (_fixture_dict("beer_compliant.json"), None, 10, 5)
+
+    with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
+        _result, error, duration_ms, _usage, _violations = extract(
+            front_bytes=_JPEG,
+            front_media_type="image/jpeg",
+            back_bytes=_JPEG,
+            back_media_type="image/jpeg",
+            model="test-model",
+            fallback_models=[],
+        )
+
+    assert error is None
+    # Sequential would be ~200ms+; parallel should finish in ~100ms + overhead.
+    assert duration_ms < 180, f"expected parallel execution, got {duration_ms:.0f}ms"
+
+
+def test_front_failure_returns_front_error():
+    """When front fails, front error is returned even if back succeeds."""
+    def mock_single(img_bytes, media_type, panel_hint, model):
+        if panel_hint == "front":
+            return (None, ExtractionError(status_code=401, message="invalid key"), 0, 0)
+        return (_fixture_dict("beer_compliant.json"), None, 100, 50)
+
+    with patch("backend.app.services.extractor._extract_single", side_effect=mock_single):
+        result, error, _, usage, _violations = extract(
+            front_bytes=_JPEG,
+            front_media_type="image/jpeg",
+            back_bytes=_JPEG,
+            back_media_type="image/jpeg",
+            model="test-model",
+            fallback_models=[],
+        )
+
+    assert result is None
+    assert error is not None
+    assert error.status_code == 401
+    assert usage is None
 
 
 # ---------------------------------------------------------------------------
