@@ -219,13 +219,13 @@ See [`.env.example`](.env.example) for all environment variables. Key settings:
 
 | Variable | Default | Description |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | — | Required for the default model. Set the appropriate key for your provider. |
+| `GEMINI_API_KEY` | — | Required for the default model (`gemini/gemini-2.5-flash-lite`). Set the appropriate key for your provider. |
 | `EXTRACTION_MODEL` | `gemini/gemini-2.5-flash-lite` | LiteLLM model string for Layer 1 extraction (`provider/model-name` format). |
-| `EXTRACTION_FALLBACK_MODELS` | _(empty)_ | Comma-separated list of fallback models tried in order on retryable errors (e.g. `gemini/gemini-2.5-flash-lite,openai/gpt-5.4-nano`). |
+| `EXTRACTION_FALLBACK_MODELS` | _(empty)_ | Comma-separated list of fallback models tried in order on retryable errors (e.g. `anthropic/claude-haiku-4-5-20251001,openai/gpt-5.4-nano`). |
 | `API_KEY` | _(empty)_ | When set, requires `X-API-Key` header on all requests. Use for Railway deployment. |
 | `AUDIT_ENABLED` | `true` | Set to `false` to disable JSONL audit log writes. |
 
-Provider API keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, etc.) are read automatically by LiteLLM when the corresponding model is configured.
+Provider API keys (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, etc.) are read automatically by LiteLLM when the corresponding model is configured.
 
 ---
 
