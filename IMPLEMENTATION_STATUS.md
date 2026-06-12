@@ -62,6 +62,7 @@ LiteLLM is the provider abstraction layer (`extractor.py` uses `litellm.completi
 - `GET /healthz` health check
 - `GET /version` — returns `{commit, environment, branch}` from Railway-injected env vars (`RAILWAY_GIT_COMMIT_SHA[:7]`, `RAILWAY_ENVIRONMENT_NAME`, `RAILWAY_GIT_BRANCH`); falls back to `"dev"` in local dev
 - Optional `X-API-Key` authentication (enforced when `API_KEY` env var is set; bypassed for local dev)
+- Per-IP rate limiting on `POST /v1/check`: **20 requests/minute** via `slowapi`. Returns HTTP 429 when exceeded. `GET /healthz` and `GET /version` are not rate-limited. Behind Railway's reverse proxy, `get_remote_address` reads `request.client.host` — if the real client IP is needed, a custom `key_func` reading `X-Forwarded-For` is the upgrade path (not required for current 1–2 user audience).
 - `CheckResponse` includes `duration_ms: float | None` — server-side extraction wall time in milliseconds (also stored in audit log as `extraction_duration_ms`)
 - JSONL audit log with per-day rotation and thread-safe writes (`audit_logs/YYYY-MM-DD.jsonl`); includes token usage per request
 - `AUDIT_ENABLED` flag for disabling writes in tests
@@ -95,7 +96,21 @@ New cross-field rule applied after all beverage-class checks: if `abv_pct` and `
 - 86 tests, 0 failures on Python 3.14 (uv run --with pytest pytest)
 - All extraction mocked — no API key required, no network calls
 - `client` fixture clears `API_KEY` via `monkeypatch.setattr("backend.app.main.API_KEY", "")` to isolate tests from host environment
+- `client` fixture calls `limiter._storage.reset()` before each test — see **slowapi test interference** below
 - Coverage: all verdict paths, all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401 no-retry, 400 no-retry, all-fallbacks-exhausted), non-dict JSON guard in `_extract_single`, empty-choices and null-content crash guard in `_extract_single`, invalid confidence string rejection, `not_found`-with-non-null-value rejection, low-confidence ABV range check (R-DS-03, R-WN-03), R-GW-02 case-insensitive body check (all-caps real-label pass), R-GW-02 at high confidence (→ NONCOMPLIANT error), proof mismatch at low confidence (→ R-DS-03 warning, not error), R-WN-08 empty-string appellation bypass (same guard as mandatory field bypass), R-META-01 null beverage class (→ UNVERIFIABLE), `gws_present=true` with no extractable text (→ single R-GW-01 not_found warning; R-GW-02/03 suppressed), upload size limit (413), magic-byte MIME validation (415), `image/jpg` alias, API key auth, token usage fields in response, partial verification flag, two-panel token summation, two-panel readable merge, empty-string and whitespace-only mandatory field bypass, receipt fields (label_ref format, sha256 value, back=None), schema_violations count, R-META-02 ABV cross-validation (mismatch, match, tolerance, not_found skip, unparseable text), `duration_ms` present and non-null in response, `GET /version` returns 200 with commit/environment/branch fields
+
+### slowapi test interference
+
+`slowapi` uses an in-memory `MemoryStorage` instance that is a **module-level singleton** — the same object lives for the entire pytest process. This causes silent cross-test contamination: each call to `POST /v1/check` increments the counter for the `"testclient"` key (the fixed remote address Starlette's `TestClient` presents). Once 20 calls accumulate within the rolling one-minute window, every subsequent test that hits the endpoint gets HTTP 429 instead of the expected response — producing `KeyError` or status assertion failures with no obvious connection to rate limiting.
+
+**Fix in place**: the `client` fixture calls `limiter._storage.reset()` before each test, clearing all counters. This is sufficient because `TestClient` calls are synchronous and instantaneous (no real time passes between tests).
+
+**What else can trigger this:**
+
+- **Adding new tests that call `/v1/check`**: each new test adds to the count within the minute window. As long as `client` is used as a fixture (not constructed inline), the reset runs automatically and each test starts clean.
+- **Tests that construct `TestClient(app)` directly** (bypassing the `client` fixture): the storage is not reset. If such a test calls `/v1/check` more than 20 times without resetting, subsequent tests will see 429. Always use the `client` fixture.
+- **`pytest-xdist` parallel execution**: workers share the same Python process memory — if ever adopted, the storage would need to be worker-local or the limiter disabled in tests via `RATELIMIT_ENABLED=0` env var (checked at import time, so must be set before `backend.app.main` is imported).
+- **`limiter._storage` is a private attribute**: if slowapi changes its internal API, the reset call will break with an `AttributeError`. The public alternative is to set `RATELIMIT_ENABLED=0` as an environment variable before importing the app — this disables the limiter entirely for the test process, which is safe since rate limiting is an infrastructure concern, not business logic.
 
 ---
 
