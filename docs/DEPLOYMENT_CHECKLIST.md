@@ -88,11 +88,23 @@ curl -X POST https://<URL>/v1/check \
 
 ### Results (2026-06-12)
 
+API smoke tests (curl):
+
 | Test | Result |
 |---|---|
 | `GET /healthz` | `{"status":"ok","audit_enabled":false}` ✓ |
 | `POST /v1/check` — no API key | 401 ✓ |
 | Glenfiddich 12 two-panel (spirits) | UNVERIFIABLE — R-GW-02 warning (rotated GWS; expected) ✓ |
+
+UI smoke tests (browser, via Railway URL) — screenshots in `docs/ui-screenshots/`:
+
+| Label | Panels | Class | Verdict | Notes |
+|---|---|---|---|---|
+| Blue Ridge Rye (synth) | front + back | spirits | COMPLIANT ✓ | 0 violations — baseline |
+| Glenfiddich 12 | front + back | spirits | UNVERIFIABLE | R-GW-02 warning — rotated GWS (expected) |
+| Delirium Tremens (bottle) | front + back | beer | NONCOMPLIANT | R-GW-02 error + R-MB-04 warning; partial verification ✓ |
+| Baci di Sangiovese | front + back | wine | COMPLIANT ✓ | 0 violations — clean European wine label |
+| Budweiser | front + back (reversed) | beer | COMPLIANT ✓ | Panels submitted in wrong order; merge robust for non-rotated labels |
 
 ---
 
