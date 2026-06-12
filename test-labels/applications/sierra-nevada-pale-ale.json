@@ -1,10 +1,10 @@
 {
-  "_comment": "Application for Sierra Nevada Pale Ale — real label pair (beer/sierra-nevada-pale-ale-front.jpg + back.jpg). Dual-location brewer (CA + NC); no state-level origin claim — origin_as_stated is country only. ABV + net contents from retail sources; brand/class from label.",
+  "_comment": "Application for Sierra Nevada Pale Ale — real label pair (beer/sierra-nevada-pale-ale-front.jpg + back.jpg). Dual-location brewer (CA + NC); no state-level origin claim. origin_as_stated='American' matches what model reads from label face (class/type 'American Pale Ale' text); stub updated 2026-06-12 post-prompt LBL-AUD-0612.",
   "brand_name": "Sierra Nevada Pale Ale",
   "class_type": "Pale Ale",
   "abv_pct": 5.6,
   "net_contents": "12 fl oz",
-  "origin_as_stated": "United States",
+  "origin_as_stated": "American",
   "origin_iso2_country": "US",
   "gws_required": true
 }
