@@ -193,9 +193,6 @@ GWS OCR false positives on punctuation (R-GW-03); hallucinated GWS body on rotat
 **What artifacts demonstrate honest scoping?**
 [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) (built/deferred/not started); ADR status icons in [docs/adr/README.md](adr/README.md); prototype notice in [README.md](../README.md); deferred rules (R-GW-04, R-MB-03) explained with *why*, not just *what*.
 
-**What should I look at in an interview conversation?**
-Walk through a two-panel request end-to-end; explain one NONCOMPLIANT issue trace from `rule_id` → `docs/rules/` → CFR; explain why UNVERIFIABLE is a feature (not a bug) for incomplete panel coverage; contrast this with a single-pass "LLM says compliant" approach.
-
 ---
 
 ## 6. Test labels and evaluation (assessing the test strategy)
