@@ -60,7 +60,9 @@ LiteLLM is the provider abstraction layer (`extractor.py` uses `litellm.completi
 ### API and infrastructure (ADR-004, ADR-006, ADR-010)
 - FastAPI with auto-generated OpenAPI docs (`/docs`)
 - `GET /healthz` health check
+- `GET /version` — returns `{commit, environment, branch}` from Railway-injected env vars (`RAILWAY_GIT_COMMIT_SHA[:7]`, `RAILWAY_ENVIRONMENT_NAME`, `RAILWAY_GIT_BRANCH`); falls back to `"dev"` in local dev
 - Optional `X-API-Key` authentication (enforced when `API_KEY` env var is set; bypassed for local dev)
+- `CheckResponse` includes `duration_ms: float | None` — server-side extraction wall time in milliseconds (also stored in audit log as `extraction_duration_ms`)
 - JSONL audit log with per-day rotation and thread-safe writes (`audit_logs/YYYY-MM-DD.jsonl`); includes token usage per request
 - `AUDIT_ENABLED` flag for disabling writes in tests
 - Model error capture and classification in audit log (status codes 401, 400, 429, 500/529)
@@ -90,9 +92,10 @@ Schema violation tracking (see ADR-011 §Layer 1 Schema Violations):
 New cross-field rule applied after all beverage-class checks: if `abv_pct` and `abv_text` are both present with usable confidence, the numeric value parsed from `abv_text` is compared with `abv_pct`. A discrepancy > 0.2% fires R-META-02 at warning severity. Motivated by Mike's Harder hallucination: `abv_pct=5.0` at high confidence while `abv_text="8% ALC. BY VOL."` correctly read 8%.
 
 ### Test suite
-- 85 tests, 0 failures on Python 3.14 (uv run --with pytest pytest)
+- 86 tests, 0 failures on Python 3.14 (uv run --with pytest pytest)
 - All extraction mocked — no API key required, no network calls
-- Coverage: all verdict paths, all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401 no-retry, 400 no-retry, all-fallbacks-exhausted), non-dict JSON guard in `_extract_single`, empty-choices and null-content crash guard in `_extract_single`, invalid confidence string rejection, `not_found`-with-non-null-value rejection, low-confidence ABV range check (R-DS-03, R-WN-03), R-GW-02 case-insensitive body check (all-caps real-label pass), R-GW-02 at high confidence (→ NONCOMPLIANT error), proof mismatch at low confidence (→ R-DS-03 warning, not error), R-WN-08 empty-string appellation bypass (same guard as mandatory field bypass), R-META-01 null beverage class (→ UNVERIFIABLE), `gws_present=true` with no extractable text (→ single R-GW-01 not_found warning; R-GW-02/03 suppressed), upload size limit (413), magic-byte MIME validation (415), `image/jpg` alias, API key auth, token usage fields in response, partial verification flag, two-panel token summation, two-panel readable merge, empty-string and whitespace-only mandatory field bypass, receipt fields (label_ref format, sha256 value, back=None), schema_violations count, R-META-02 ABV cross-validation (mismatch, match, tolerance, not_found skip, unparseable text)
+- `client` fixture clears `API_KEY` via `monkeypatch.setattr("backend.app.main.API_KEY", "")` to isolate tests from host environment
+- Coverage: all verdict paths, all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401 no-retry, 400 no-retry, all-fallbacks-exhausted), non-dict JSON guard in `_extract_single`, empty-choices and null-content crash guard in `_extract_single`, invalid confidence string rejection, `not_found`-with-non-null-value rejection, low-confidence ABV range check (R-DS-03, R-WN-03), R-GW-02 case-insensitive body check (all-caps real-label pass), R-GW-02 at high confidence (→ NONCOMPLIANT error), proof mismatch at low confidence (→ R-DS-03 warning, not error), R-WN-08 empty-string appellation bypass (same guard as mandatory field bypass), R-META-01 null beverage class (→ UNVERIFIABLE), `gws_present=true` with no extractable text (→ single R-GW-01 not_found warning; R-GW-02/03 suppressed), upload size limit (413), magic-byte MIME validation (415), `image/jpg` alias, API key auth, token usage fields in response, partial verification flag, two-panel token summation, two-panel readable merge, empty-string and whitespace-only mandatory field bypass, receipt fields (label_ref format, sha256 value, back=None), schema_violations count, R-META-02 ABV cross-validation (mismatch, match, tolerance, not_found skip, unparseable text), `duration_ms` present and non-null in response, `GET /version` returns 200 with commit/environment/branch fields
 
 ---
 
@@ -123,7 +126,7 @@ Not implemented: resolution normalization, contrast enhancement for low-quality 
 ### Frontend (ADR-005) — ⚠ Partial
 **ADR reference:** ADR-005
 
-A React + Vite + Tailwind v4 UI is built (`frontend/`) and served from the FastAPI backend via `StaticFiles` at `/`. Drag-and-drop and click-to-pick upload are implemented for front and back panels. Structured compliance results (verdict, issues table, receipt metadata) are displayed.
+A React + Vite + Tailwind v4 UI is built (`frontend/`) and served from the FastAPI backend via `StaticFiles` at `/`. Drag-and-drop and click-to-pick upload are implemented for front and back panels. Structured compliance results (verdict, issues table, receipt metadata) are displayed. Additional UI features: `duration_ms` shown in metadata grid (extraction latency in seconds), version commit and environment displayed in header (fetched from `GET /version` on mount), "New check" button clears panels and result without clearing the API key — UploadZone components re-mount via `uploadKey` React state increment.
 
 Not built: the base64 JSON endpoint specified in ADR-005 — the UI uses multipart `POST /v1/check` directly. The mobile-optimized layout is also deferred (desktop-first).
 
