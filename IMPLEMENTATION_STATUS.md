@@ -9,7 +9,7 @@ This document maps each Architecture Decision Record to its current build state,
 ### Core two-layer pipeline (ADR-009)
 The full request path is implemented end-to-end:
 - `POST /v1/check` accepts one or two label images (JPEG, PNG, WebP)
-- Layer 1 (`backend/app/services/extractor.py`) sends images to a configurable vision model via LiteLLM and returns a typed `ExtractionResult`
+- Layer 1 (`backend/app/services/extractor.py`) sends images to a configurable vision model via LiteLLM and returns a typed `ExtractionResult`. When both panels are submitted, the two `_extract_single` calls run concurrently via `ThreadPoolExecutor(max_workers=2)`; the FastAPI handler wraps the sync `extract()` call in `asyncio.to_thread()` so the event loop is not blocked. Two-panel wall-clock latency: ~5.1s sequential → ~2.2s parallel (Gemini Flash-Lite; 57% reduction).
 - Layer 2 (`backend/app/services/compliance_checker.py`) applies deterministic TTB rules and returns a `ComplianceResult` with verdict and rule-mapped issues
 - The two layers are fully decoupled — Layer 2 has no AI imports and is independently unit-testable
 
@@ -90,7 +90,7 @@ Schema violation tracking (see ADR-011 §Layer 1 Schema Violations):
 New cross-field rule applied after all beverage-class checks: if `abv_pct` and `abv_text` are both present with usable confidence, the numeric value parsed from `abv_text` is compared with `abv_pct`. A discrepancy > 0.2% fires R-META-02 at warning severity. Motivated by Mike's Harder hallucination: `abv_pct=5.0` at high confidence while `abv_text="8% ALC. BY VOL."` correctly read 8%.
 
 ### Test suite
-- 88 tests, 0 failures on Python 3.14 (uv run --with pytest pytest)
+- 85 tests, 0 failures on Python 3.14 (uv run --with pytest pytest)
 - All extraction mocked — no API key required, no network calls
 - Coverage: all verdict paths, all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401 no-retry, 400 no-retry, all-fallbacks-exhausted), non-dict JSON guard in `_extract_single`, empty-choices and null-content crash guard in `_extract_single`, invalid confidence string rejection, `not_found`-with-non-null-value rejection, low-confidence ABV range check (R-DS-03, R-WN-03), R-GW-02 case-insensitive body check (all-caps real-label pass), R-GW-02 at high confidence (→ NONCOMPLIANT error), proof mismatch at low confidence (→ R-DS-03 warning, not error), R-WN-08 empty-string appellation bypass (same guard as mandatory field bypass), R-META-01 null beverage class (→ UNVERIFIABLE), `gws_present=true` with no extractable text (→ single R-GW-01 not_found warning; R-GW-02/03 suppressed), upload size limit (413), magic-byte MIME validation (415), `image/jpg` alias, API key auth, token usage fields in response, partial verification flag, two-panel token summation, two-panel readable merge, empty-string and whitespace-only mandatory field bypass, receipt fields (label_ref format, sha256 value, back=None), schema_violations count, R-META-02 ABV cross-validation (mismatch, match, tolerance, not_found skip, unparseable text)
 

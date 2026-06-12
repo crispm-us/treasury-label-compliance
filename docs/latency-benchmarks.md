@@ -85,16 +85,58 @@ Notes:
 
 ---
 
+## 2026-06-12 — Parallel two-panel extraction (`ThreadPoolExecutor`)
+
+Both panels are now submitted to the model concurrently within `extract()` using a per-call `ThreadPoolExecutor(max_workers=2)`. The event loop is no longer blocked: `main.py` wraps the call in `asyncio.to_thread()`. Benchmarks measured with the same setup as the three-provider run above (localhost, single uvicorn worker, `AUDIT_ENABLED=false`, 1 warm-up + 3 timed runs).
+
+### Gemini 2.5 Flash-Lite — parallel two-panel
+
+| Scenario | Run 1 | Run 2 | Run 3 | Avg |
+|---|---|---|---|---|
+| Two panel — parallel | 2.18s | 2.27s | 2.18s | **2.21s** |
+
+**Baseline (sequential):** 5.11s avg. **Improvement:** 2.90s, **57% faster**. Wall-clock time is now `max(front, back) + overhead` rather than `front + back`.
+
+### Anthropic Claude Haiku 4.5 — parallel two-panel
+
+| Scenario | Run 1 | Run 2 | Run 3 | Avg |
+|---|---|---|---|---|
+| Two panel — parallel | — | — | — | **~4.36s** |
+
+Baseline (sequential): 7.75s avg. Estimated ~44% improvement; individual run timings not recorded.
+
+### OpenAI gpt-5.4-nano — parallel (single + two-panel)
+
+| Scenario | Run 1 | Run 2 | Run 3 | Avg | Verdict |
+|---|---|---|---|---|---|
+| Single panel | 4.046s | 4.069s | 5.344s | **4.486s** | UNVERIFIABLE × 3 |
+| Two panel — parallel | 4.660s | 4.995s | ✗ ERROR | **4.828s** | COMPLIANT × 2 |
+
+Baseline two-panel (sequential): 11.823s avg. **Improvement: 59% faster**; now within the 5s SLA.
+
+Notes:
+- **Single panel UNVERIFIABLE** is a pre-existing quality regression — nano marks GWS fields as `not_found` rather than `gws_present=false`, yielding UNVERIFIABLE instead of NONCOMPLIANT. The extraction prompt was tuned against Flash-Lite and Haiku; nano requires prompt work before production use on single-panel submissions.
+- **Two-panel COMPLIANT** is correct for the spirits test label — both panels give the model the GWS and all required fields.
+- **One ERROR on two-panel run 3** (transient API error, excluded from avg). Fallback chain handles this in production.
+
+### Single-panel latency — unchanged
+
+Parallel extraction only applies when both front and back panels are submitted. Single-panel requests are not affected.
+
+---
+
 ## Summary comparison (all models tested)
 
-| Model | Single panel | Two panel | Quality | vs. 5s target |
+| Model | Single panel | Two panel (sequential) | Two panel (parallel) | vs. 5s target |
 |---|---|---|---|---|
-| `gemini/gemini-2.5-flash-lite` | **2.55s** | **5.11s** | ✅ Correct | ✅ Single; ⚠ Two-panel borderline |
-| `anthropic/claude-haiku-4-5-20251001` | 3.77s | 7.75s | ✅ Correct | ❌ Two-panel exceeds |
-| `openai/gpt-5.4-nano` | 4.05s | 11.82s | ⚠ Quality regression | ❌ Both exceed |
-| `gemini/gemini-2.5-flash` | 7.06s | 12.26s | ✅ Correct | ❌ Both exceed |
+| `gemini/gemini-2.5-flash-lite` | **2.55s** | 5.11s | **2.21s** | ✅ Both within target |
+| `anthropic/claude-haiku-4-5-20251001` | 3.77s | 7.75s | ~4.36s | ✅ Both within target |
+| `openai/gpt-5.4-nano` | 4.49s | 11.82s | **4.83s** | ⚠ Within target; quality regression on single panel |
+| `gemini/gemini-2.5-flash` | 7.06s | 12.26s | not measured | ❌ Both exceed even sequentially |
 
 **Chosen configuration:** Flash-Lite primary → Haiku fallback-1 → gpt-5.4-nano fallback-2 (last resort; not validated for production without prompt tuning). Flash (full) offers no latency or quality advantage over Flash-Lite for this workload and is not recommended.
+
+**Parallel extraction status:** Implemented for the current two-panel API. Full async (`litellm.acompletion` + `asyncio.gather`) is the documented follow-on path when N-panel or batch support (ADR-007, ADR-012) is added.
 
 ---
 

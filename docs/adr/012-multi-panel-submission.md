@@ -80,17 +80,19 @@ Where `_merge_two` is the existing field-by-field highest-confidence logic, extr
 
 This is the most significant architectural consequence.
 
-Current sequential timings (Gemini Flash-Lite, warm):
+Timings (Gemini Flash-Lite, warm):
 
-| Panels | Approx. latency |
-|---|---|
-| 1 | ~2.5 s |
-| 2 | ~5.1 s |
-| 3 | ~7.5 s (sequential) |
+| Panels | Sequential | Parallel | Notes |
+|---|---|---|---|
+| 1 | ~2.5 s | ~2.5 s | Parallel N/A for single panel |
+| 2 | ~5.1 s | **~2.2 s** | ✅ Implemented (ThreadPoolExecutor) |
+| 3 | ~7.5 s | ~3.5 s (est.) | Not yet implemented |
 
-Three sequential model calls exceed the 5 s SLA with no margin. Parallel extraction is required to stay within budget.
+**Two-panel parallel extraction is implemented** as of 2026-06-12 via `ThreadPoolExecutor(max_workers=2)` inside the sync `extract()` function, with `asyncio.to_thread()` in `main.py` to avoid blocking the event loop. This achieves a 57% latency reduction (5.1s → 2.2s) for two-panel requests.
 
-**Parallel extraction path:**
+Three sequential model calls exceed the 5 s SLA with no margin. Parallel extraction is required for three-panel support too.
+
+**Parallel extraction path for N-panel (not yet implemented):**
 
 ```python
 import asyncio
@@ -100,11 +102,11 @@ async def extract_all(images: list[...]) -> list[ExtractionResult]:
     return await asyncio.gather(*tasks)
 ```
 
-`extractor.py` is currently synchronous. Making `_extract_single` async is not complex — `litellm.acompletion` is available — but it requires converting the call sites in `main.py` to async as well. FastAPI supports async route handlers natively; `main.py` already uses `async def`. The fallback chain inside `_extract_single` would become an async retry loop.
+The correct upgrade from the current `ThreadPoolExecutor` bridge is full async using `litellm.acompletion` + `asyncio.gather` — do not layer another thread pool on top. `_extract_single` becomes async; the fallback chain inside becomes an async retry loop. `main.py` already uses `async def` and the `asyncio.to_thread()` wrapper is removed once the function is natively async.
 
 Estimated parallel latency for three panels: ~3.5 s (dominated by slowest panel, plus minor scheduling overhead). Within SLA.
 
-**Key point:** parallel extraction is not optional if three-panel support is to be meaningful. Documenting this upfront avoids implementing the API change and discovering the latency problem after the fact.
+**Key point:** parallel extraction is not optional if three-panel support is to be meaningful. The two-panel implementation validates the approach; N-panel extends it.
 
 ---
 
