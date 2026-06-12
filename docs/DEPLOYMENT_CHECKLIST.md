@@ -205,14 +205,14 @@ The smoke test (`scripts/smoke-test.sh`) includes real-label calls for Henninger
 
 ### Multi-panel test matrix
 
-For each product below, the "front-only" submission exercises the path where compliance-critical content (typically the GWS) is absent from the submitted panel; the "front+back" submission is the expected success path. Verdicts marked ✓ are confirmed from a smoke-test run against Gemini Flash Lite (2026-06-11). `unverified*` entries have not been tested against a live model.
+For each product below, the "front-only" submission exercises the path where compliance-critical content (typically the GWS) is absent from the submitted panel; the "front+back" submission is the expected success path. Verdicts marked ✓ are confirmed from a smoke-test run against Gemini Flash Lite (2026-06-12). `unverified*` entries have not been tested against a live model.
 
 | Product | Front-only | Front+back | Notes |
 |---|---|---|---|
 | **Synthetic labels** | | | |
-| Copper Creek Merlot synth (R-WN-09) | — | **COMPLIANT** ✓ | R-WN-09 is warning-only (cannot verify SO₂ level from image); COMPLIANT is correct; schema_violations=9 — notable: high violations but verdict unaffected |
+| Copper Creek Merlot synth (R-WN-09) | — | UNVERIFIABLE ✓ (R-WN-08, R-WN-09) | R-WN-08: vintage year detected but appellation not visible — pre-prompt model silently returned null appellation without triggering this rule; post-prompt it correctly fires; R-WN-09 still fires (sulfite declaration unverifiable from image, unchanged); schema_violations=0 (was 9 pre-prompt); verdict change is improvement in model honesty; screenshot: docs/ui-screenshots/railway-copper-creek-merlot-unverifiable-postprompt.png |
 | Silverleaf Chardonnay synth (compliant baseline) | — | **COMPLIANT** ✓ | schema_violations=0 — cleanest extraction in corpus |
-| Blue Ridge Rye synth (compliant baseline, reversed panels) | — | **COMPLIANT** ✓ | Panels submitted reversed (back→front slot); schema_violations=11; merge correctly handles wrong slot |
+| Blue Ridge Rye synth (compliant baseline, reversed panels) | — | **COMPLIANT** ✓ | Panels submitted reversed (back→front slot); schema_violations=0 post-prompt (was 11 pre-prompt); merge correctly handles wrong slot; screenshot: docs/ui-screenshots/railway-blue-ridge-rye-compliant-postprompt.png |
 | **Real labels — spirits** | | | |
 | Tito's Vodka | NONCOMPLIANT ✓ (R-GW-01, R-DS-04, R-DS-03) | **COMPLIANT** ✓ | GWS on back correctly found; schema_violations=4 (compliant verdict despite violations) |
 | JD Old No. 7 EU 70cl | NONCOMPLIANT ✓ (R-GW-01) | — (front only) | Non-US label; no GWS |
@@ -223,7 +223,7 @@ For each product below, the "front-only" submission exercises the path where com
 | Stiegl Radler | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | ⚠ Previous prediction was UNVERIFIABLE — model finds 2.5% ABV on label; actual COMPLIANT |
 | Budweiser | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ (R-MB-04) | ⚠ Robustness test only — panels reversed intentionally to verify panel-agnostic merge; net contents absent from both panels; UNVERIFIABLE is expected and correct; not a compliance signal |
 | Delirium Tremens bottle | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02, R-MB-04) | R-GW-02 body mismatch; schema_violations=8 (model returned 8 bare primitives — notable quality signal) |
-| Delirium Tremens can | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | Submitted as front+GWS; GWS body text on can fails verbatim check |
+| Delirium Tremens can | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ (R-GW-03, R-GW-02, R-MB-04, R-MB-03 — all warnings) | Post-prompt: R-GW-02 downgraded from error to warning (model less certain on partially-obscured GWS body); all-warnings verdict → UNVERIFIABLE; schema_violations pre-prompt=8, post-prompt not captured; screenshot: docs/ui-screenshots/railway-delirium-tremens-can-unverifiable-postprompt.png |
 | Heineken Original | NONCOMPLIANT ✓ (R-GW-01, R-MB-04, R-MB-05 ×2) | **COMPLIANT** ✓ | |
 | Sierra Nevada Pale Ale | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | partial_verification; R-MB-04 + R-MB-03 warnings (net contents + ABV not visible); schema_violations=0 |
 | **Real labels — wine** | | | |
