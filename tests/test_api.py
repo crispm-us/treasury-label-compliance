@@ -52,6 +52,9 @@ def client(monkeypatch) -> TestClient:
     # Clear API_KEY so tests run without auth by default.
     # Tests that specifically exercise auth behaviour use monkeypatch themselves.
     monkeypatch.setattr("backend.app.main.API_KEY", "")
+    # Reset slowapi in-memory storage so rate limits don't bleed across tests.
+    from backend.app.main import limiter
+    limiter._storage.reset()
     return TestClient(app)
 
 

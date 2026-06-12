@@ -26,10 +26,13 @@ from typing import Annotated
 
 from PIL import Image, ImageOps
 
-from fastapi import FastAPI, File, HTTPException, Security, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, Security, UploadFile
 from fastapi.security import APIKeyHeader
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from backend.app.config import API_KEY, AUDIT_ENABLED, EXTRACTION_MODEL
 from backend.app.services.audit import write_entry
@@ -55,6 +58,8 @@ async def _require_api_key(key: str | None = Security(_api_key_header)) -> None:
 # App
 # ---------------------------------------------------------------------------
 
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="TTB Label Compliance API",
     version="0.1.0",
@@ -63,6 +68,8 @@ app = FastAPI(
         "Layer 2 (deterministic TTB compliance check)."
     ),
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ---------------------------------------------------------------------------
 # Upload validation
@@ -211,7 +218,9 @@ class CheckResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 @app.post("/v1/check", response_model=CheckResponse, dependencies=[Security(_require_api_key)])
+@limiter.limit("20/minute")
 async def check_label(
+    request: Request,
     front: Annotated[
         UploadFile,
         File(description="Front panel image — JPEG, PNG, or WebP"),
