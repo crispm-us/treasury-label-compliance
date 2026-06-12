@@ -133,6 +133,15 @@ Batch ([ADR-007](adr/007-batch-processing-design.md)) is not built. Mode A appli
 **What comes back besides the verdict?**
 `request_id`, token usage, filenames, SHA-256 hashes, label references. Server-side JSONL audit logs in `audit_logs/` (gitignored, sensitive). See [ADR-010](adr/010-audit-logging.md).
 
+**Why does R-APP-05 (origin match) flag labels that say "American" or show a state or city name?**
+R-APP-05 does exact string comparison between the vision model's `country_of_origin` extraction and the declared stub value (typically `"United States"`). The model frequently extracts `"American"`, `"Kentucky"`, `"Lawrenceburg, KY"`, or a country abbreviation — all genuinely US origin — but none matches the declared string.
+
+US origin determination is not a string-normalization problem solvable with a fixed enumeration. A correct resolver must handle 50 state names and abbreviations, Washington D.C., all US territories (Puerto Rico, Guam, U.S. Virgin Islands, Northern Mariana Islands, American Samoa), and variant spellings (`"USA"`, `"U.S.A."`, `"United States of America"`, unqualified `"American"`). It must also reject superficially similar strings such as `"South American"` or `"North American"` that are not US origin.
+
+The production design should delegate to an external geo-normalization service rather than maintaining an in-house enumeration — the same argument that leads to delegating sales tax computation to a zipcode-aware service (Avalara, TaxJar, etc.) rather than encoding tax rules in application code. A single classification call at check time (extracted string → ISO 3166-1 country code) is the clean architecture; the R-APP-05 rule then compares codes, not strings.
+
+This is a documented prototype limitation. The current R-APP-05 false-positive rate on genuine US-origin labels is high; treat R-APP-05 `warning`-severity results as informational until normalization is addressed.
+
 ### Architecture and design
 
 **Why two layers instead of asking the LLM "is this compliant?"**
@@ -182,7 +191,7 @@ Read [docs/adr/README.md](adr/README.md) status table alongside [IMPLEMENTATION_
 Historical context for scope decisions and stakeholder constraints (no COLA integration, no persistent storage, verbatim GWS requirement). Not current behavior.
 
 **What would production need beyond this prototype?**
-Human review queue for NONCOMPLIANT/UNVERIFIABLE; schema version gate; Unicode normalization for GWS; calibrated R-GW-04 bold check; full image preprocessing; COLA integration; net-contents parsing; appellation verification; deployment hardening. Listed in [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md).
+Human review queue for NONCOMPLIANT/UNVERIFIABLE; schema version gate; Unicode normalization for GWS; calibrated R-GW-04 bold check; full image preprocessing; COLA integration; net-contents parsing; appellation verification; geo-normalization service for R-APP-05 origin matching (see Part I §4); deployment hardening. Listed in [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md).
 
 **How was quality validated beyond unit tests?**
 Synthetic labels with embedded defect markers; real bottle/can photographs; `scripts/smoke-test.sh`; `scripts/benchmark-latency.sh`. Real labels exposed rotation, multi-panel, and hallucination edge cases documented in [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md) and [project-log.md](project-log.md).
