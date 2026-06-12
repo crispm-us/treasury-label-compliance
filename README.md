@@ -84,7 +84,7 @@ bash scripts/smoke-test.sh
 
 ## Scope
 
-This prototype implements the two-layer extraction + compliance architecture with 86+ tests, real-label smoke tests, a three-provider fallback chain, and a React + Vite web UI. Mode A is implemented (file-based application stubs; COLA integration deferred). Batch upload and HEIC conversion remain deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
+This prototype implements the two-layer extraction + compliance architecture with 101 tests, `GET /v1/applications` COLA stub catalog, real-label smoke tests, a three-provider fallback chain, and a React + Vite web UI. Mode A application-matching is implemented end-to-end (API + UI COLA stub toggle; COLA on-file integration deferred). Batch upload and HEIC conversion remain deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
 
 ---
 
@@ -142,6 +142,7 @@ For live API smoke testing against a running server, see [`scripts/smoke-test.sh
 |---|---|---|---|
 | `front` | image/jpeg, image/png, or image/webp | Yes | Front panel (max 10 MB) |
 | `back` | image/jpeg, image/png, or image/webp | No | Back panel (max 10 MB) |
+| `application` | string (JSON) | No | `ApplicationFields` JSON for Mode A application-matching. When present, extracted label fields are compared against declared values and mismatches appear as R-APP-* issues. |
 
 **Response** (200 OK)
 
@@ -150,6 +151,8 @@ For live API smoke testing against a running server, see [`scripts/smoke-test.sh
   "request_id": "uuid",
   "timestamp": "2026-01-01T00:00:00+00:00",
   "verdict": "NONCOMPLIANT",
+  "mode": "regulation_only",
+  "application_fields_provided": [],
   "beverage_class": "beer",
   "issues": [
     {
@@ -190,6 +193,12 @@ For live API smoke testing against a running server, see [`scripts/smoke-test.sh
 
 Returns `{"status": "ok", "audit_enabled": true}`.
 
+### `GET /v1/applications`
+
+Returns the curated COLA stub catalog for Mode A demo use.
+
+Response: array of `{ id, label, fields }` objects. `fields` contains the `ApplicationFields` for that stub. Returns a partial array if any stub files are absent (demo-only endpoint — reads from `test-labels/applications/` at request time).
+
 ---
 
 ## Running tests
@@ -200,7 +209,7 @@ All tests mock the extraction layer — no API key or network access required.
 uv run --with pytest pytest tests/ -v
 ```
 
-86 tests covering: verdict paths (compliant, noncompliant, unverifiable, error), all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401/400 no-retry, all-fallbacks-exhausted), non-dict JSON guard, upload size limit (413), magic-byte MIME validation (415), API key auth, token usage fields, partial verification flag, two-panel token summation, readable merge, empty/whitespace mandatory field bypass, proof mismatch at low confidence (warning), R-WN-08 empty-string appellation bypass, null beverage class (R-META-01), GWS boolean-true with no extractable text, receipt fields (label_ref, sha256), schema_violations count, duration_ms, and GET /version. See `tests/test_api.py`, `tests/test_extractor.py`, and `tests/test_compliance_checker.py`.
+101 tests across `tests/test_api.py`, `tests/test_compliance_checker.py`, `tests/test_extractor.py`, and `tests/test_application_checker.py`. See `tests/` for full coverage.
 
 ---
 

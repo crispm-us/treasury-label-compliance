@@ -128,7 +128,7 @@ Set `API_KEY`; send `X-API-Key` on every request. Unset locally = no auth. `POST
 `EXTRACTION_MODEL` (primary) and `EXTRACTION_FALLBACK_MODELS` (comma-separated, sequential on retryable errors). Benchmarks favor Gemini 2.5 Flash-Lite for speed; see [latency-benchmarks.md](latency-benchmarks.md).
 
 **Batch endpoint or verify-without-model mode?**
-Neither. Batch ([ADR-007](adr/007-batch-processing-design.md)) and Mode A verify harness ([ADR-003](adr/003-dual-mode-input.md)) were not built. Tests mock extraction instead.
+Batch ([ADR-007](adr/007-batch-processing-design.md)) is not built. Mode A application-matching ([ADR-003](adr/003-dual-mode-input.md)) is partially implemented: optional `application` JSON on `POST /v1/check` (R-APP-01–R-APP-05), UI COLA stub toggle, and `GET /v1/applications` catalog — extraction still runs via the vision model; full COLA on-file integration is deferred. Tests mock extraction.
 
 **What comes back besides the verdict?**
 `request_id`, token usage, filenames, SHA-256 hashes, label references. Server-side JSONL audit logs in `audit_logs/` (gitignored, sensitive). See [ADR-010](adr/010-audit-logging.md).
@@ -167,7 +167,7 @@ Yes for all tested configurations. Single-panel Flash-Lite ~2.5 s; two-panel par
 ## 5. Evaluating the project — scope, process, and architecture
 
 **What was the original ask vs. what was delivered?**
-[requirements-analysis.md](requirements-analysis.md) specified React UI, batch upload, Mode A verify harness, HEIC conversion, 5 s SLA, and image resize/backoff. [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) is the honest built-vs-deferred accounting. When they conflict, implementation status and code win.
+[requirements-analysis.md](requirements-analysis.md) specified React UI, batch upload, Mode A verify harness, HEIC conversion, 5 s SLA, and image resize/backoff. Mode A application-matching is partially delivered (API + UI toggle; COLA on-file integration deferred). [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) is the honest built-vs-deferred accounting. When they conflict, implementation status and code win.
 
 **What is the core design insight worth explaining?**
 Strict separation of AI extraction (Layer 1) from deterministic compliance checking (Layer 2). Compliance logic is auditable, version-controlled, and unit-testable independent of the model. Everything else — multi-provider fallback, audit logging, rule files as repo artifacts — supports that separation.
@@ -176,7 +176,7 @@ Strict separation of AI extraction (Layer 1) from deterministic compliance check
 [docs/adr/](adr/) — decisions with explicit trade-offs and alternatives rejected. [docs/project-log.md](project-log.md) — stakeholder inputs, iteration, debugging (sanitize before public push per [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)).
 
 **How do I quickly assess architectural completeness?**
-Read [docs/adr/README.md](adr/README.md) status table alongside [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md). Built: two-layer pipeline (009), extraction schema (011), FastAPI (004), Railway target (006), partial audit (010), partial preprocessing (008), partial UI — React+Vite+Tailwind (005). Not built: batch (007), Mode A (003).
+Read [docs/adr/README.md](adr/README.md) status table alongside [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md). Built: two-layer pipeline (009), extraction schema (011), FastAPI (004), Railway target (006), partial audit (010), partial preprocessing (008), partial UI — React+Vite+Tailwind (005), partial Mode A application-matching (003). Not built: batch (007). Mode A full COLA on-file integration remains deferred.
 
 **Why keep `requirements-analysis.md` if much is deferred?**
 Historical context for scope decisions and stakeholder constraints (no COLA integration, no persistent storage, verbatim GWS requirement). Not current behavior.

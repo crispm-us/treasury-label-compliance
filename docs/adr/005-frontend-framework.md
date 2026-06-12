@@ -3,7 +3,7 @@
 Date: 2026-06-09
 Status: Accepted — **⚠ Partial**
 
-> **Implementation status:** The React + Vite + Tailwind UI is built (`frontend/`). Drag-and-drop and click-to-pick upload are implemented. The base64 JSON endpoint is not built — the UI uses multipart `POST /v1/check` (not `/api/v1/labels/check`). The UI is served from `frontend/dist/` via FastAPI `StaticFiles`. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
+> **Implementation status:** The React + Vite + Tailwind UI is built (`frontend/`). Drag-and-drop and click-to-pick upload are implemented. Mode A COLA stub toggle implemented (collapsible section, catalog dropdown from `GET /v1/applications`, `application=` on submit). The base64 JSON endpoint is not built — the UI uses multipart `POST /v1/check` (not `/api/v1/labels/check`). The UI is served from `frontend/dist/` via FastAPI `StaticFiles`. Mobile-optimized layout remains deferred. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
 
 ## Context
 

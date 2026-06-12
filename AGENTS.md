@@ -32,7 +32,7 @@ Read in this order:
 | Claim | Where to verify |
 |---|---|
 | <5 s SLA | `docs/latency-benchmarks.md` (parallel extraction section) |
-| 86 tests, 0 failures | Run `uv run --with pytest pytest` — no API key needed; extraction is fully mocked |
+| 101 tests, 0 failures | Run `uv run --with pytest pytest` — no API key needed; extraction is fully mocked |
 | Three-provider fallback | `backend/app/services/extractor.py` + `backend/app/config.py` |
 | Parallel extraction | `backend/app/services/extractor.py` (`ThreadPoolExecutor`) |
 | Railway deployment | `DEPLOYMENT_CHECKLIST.md` + `docs/ui-screenshots/` |
@@ -41,7 +41,7 @@ Read in this order:
 
 ## What is deliberately out of scope
 
-Mode A verify-harness (ADR-003), batch endpoint (ADR-007), HEIC conversion, COLA integration, and persistent database are all deferred or not started. See `IMPLEMENTATION_STATUS.md` §Deferred and §Not started.
+Mode A application-matching (ADR-003) is partially implemented — API (`application=` on `POST /v1/check`, R-APP-01–R-APP-05), UI COLA stub toggle, and `GET /v1/applications` catalog; full COLA on-file integration is deferred. Batch endpoint (ADR-007), HEIC conversion, and persistent database are deferred or not started. See `IMPLEMENTATION_STATUS.md` §Deferred and §Not started.
 
 ---
 
