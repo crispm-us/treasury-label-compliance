@@ -25,3 +25,4 @@ One ADR per significant design decision. Read them for rationale and context. Fo
 | [009](009-two-layer-architecture.md) | Two-layer architecture: AI extraction + deterministic compliance | ✅ Built |
 | [010](010-audit-logging.md) | Audit logging | ⚠ Partial — JSONL audit log implemented; sensitivity-tier enforcement (Level A/B/C) from original design not implemented — see ADR-010 body |
 | [011](011-extraction-schema.md) | Extraction JSON schema (18-field ExtractionResult) | ✅ Built |
+| [012](012-multi-panel-submission.md) | Multi-panel submission — two-panel design and N-panel extension path | ❌ Not built — two-panel implemented; three-panel assessed and deferred; see ADR body for full impact analysis |
