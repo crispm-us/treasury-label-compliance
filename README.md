@@ -216,6 +216,7 @@ Provider API keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, etc.) are read automatica
 
 See [`docs/README.md`](docs/README.md) for a reading-order guide and audience map.
 
+- [`AGENTS.md`](AGENTS.md) — AI-readable orientation guide for agents scanning this repository
 - [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) — What is built vs. deliberately deferred; read this before the ADRs
 - [`docs/adr/`](docs/adr/) — Architecture Decision Records (ADR-001 through ADR-011); see [`docs/adr/README.md`](docs/adr/README.md) for status of each
 - [`docs/rules/`](docs/rules/) — TTB rule reference by beverage class

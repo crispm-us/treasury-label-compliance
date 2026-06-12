@@ -2,6 +2,37 @@
 
 This directory has multiple doc layers written at different stages of the project. Start here.
 
+---
+
+## Ground truth
+
+Code and `IMPLEMENTATION_STATUS.md` reflect current reality. ADRs describe accepted design decisions, some of which are not yet implemented. `requirements-analysis.md` is historical context only — treat it as the original stakeholder spec, not current behavior.
+
+---
+
+## Reading paths
+
+### Evaluator / technical reviewer path
+
+Read in this order:
+
+1. `docs/FAQ.md` Part II — scope, architecture rationale, and known limitations framed for assessment
+2. `IMPLEMENTATION_STATUS.md` — authoritative built/deferred/not-started accounting
+3. `docs/adr/README.md` — one-page status table for all 12 ADRs
+4. Selected ADRs: [009](adr/009-two-layer-architecture.md) (two-layer architecture), [011](adr/011-extraction-schema.md) (extraction schema), [001](adr/001-vision-model-selection.md) (model selection and SLA)
+5. `README.md` — setup, API reference, and test instructions
+
+### Developer / deployer path
+
+Read in this order:
+
+1. `README.md` — quick start, API reference, and configuration
+2. `.env.example` — required environment variables
+3. `docs/rules/` — TTB rule reference files by beverage class
+4. `docs/DEPLOYMENT_CHECKLIST.md` — Railway deployment and real-label smoke test matrix
+
+---
+
 ## Reading order
 
 1. **`../README.md`** (repo root) — API contract, quick start, configuration. The entry point for everyone.
