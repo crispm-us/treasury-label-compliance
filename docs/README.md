@@ -32,3 +32,5 @@ Several ADRs (003, 005, 007) describe designs accepted during planning but not i
 **Test label corpus:** `../test-labels/README.md`
 
 **Design evolution / interview narrative:** `project-log.md` (sanitize before public push — see DEPLOYMENT_CHECKLIST §1)
+
+**Questions from any audience:** `FAQ.md` — Part I for users and integrators, Part II for evaluators and interviewers

@@ -202,6 +202,7 @@ See [`docs/README.md`](docs/README.md) for a reading-order guide and audience ma
 - [`docs/latency-benchmarks.md`](docs/latency-benchmarks.md) — Observed extraction latency across four models; benchmark script usage
 - [`docs/DEPLOYMENT_CHECKLIST.md`](docs/DEPLOYMENT_CHECKLIST.md) — Pre-push hygiene, Railway deployment, and real-label test matrix
 - [`test-labels/README.md`](test-labels/README.md) — Test label corpus: synthetic fixtures, defect coverage, and real label pairs
+- [`docs/FAQ.md`](docs/FAQ.md) — Two-part FAQ: Part I for users and integrators; Part II for evaluators and interviewers
 
 ---
 
