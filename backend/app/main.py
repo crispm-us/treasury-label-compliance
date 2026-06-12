@@ -203,6 +203,7 @@ class CheckResponse(BaseModel):
     back_label_ref:        str | None
     back_sha256:           str | None
     schema_violations:     int          # count of Layer 1 non-dict field values (model prompt non-compliance)
+    duration_ms:           float | None # server-side extraction wall time in milliseconds
 
 
 # ---------------------------------------------------------------------------
@@ -338,6 +339,7 @@ async def check_label(
         back_label_ref=back_label_ref,
         back_sha256=back_sha256,
         schema_violations=len(schema_violations),
+        duration_ms=round(duration_ms, 1),
     )
 
 
@@ -348,6 +350,21 @@ async def check_label(
 @app.get("/healthz")
 async def healthz() -> dict:
     return {"status": "ok", "audit_enabled": AUDIT_ENABLED}
+
+
+# ---------------------------------------------------------------------------
+# Version
+# ---------------------------------------------------------------------------
+
+@app.get("/version")
+async def version() -> dict:
+    """Return deployment metadata. Useful for UI display and debugging."""
+    import os
+    return {
+        "commit":      os.getenv("RAILWAY_GIT_COMMIT_SHA", "dev")[:7],
+        "environment": os.getenv("RAILWAY_ENVIRONMENT_NAME", "dev"),
+        "branch":      os.getenv("RAILWAY_GIT_BRANCH", ""),
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 // ---------------------------------------------------------------------------
 // Verdict styling
@@ -177,6 +177,9 @@ function ResultPanel({ result }) {
         {result.input_tokens != null && (
           <span><span className="font-medium text-gray-500">tokens </span>{result.input_tokens} in / {result.output_tokens} out</span>
         )}
+        {result.duration_ms != null && (
+          <span><span className="font-medium text-gray-500">duration </span>{(result.duration_ms / 1000).toFixed(2)} s</span>
+        )}
         <span><span className="font-medium text-gray-500">schema_violations </span>{result.schema_violations ?? 0}</span>
         {result.front_label_ref && (
           <span className="col-span-2 font-mono break-all">
@@ -198,12 +201,22 @@ function ResultPanel({ result }) {
 // ---------------------------------------------------------------------------
 
 export default function App() {
-  const [front,   setFront]   = useState(null)
-  const [back,    setBack]    = useState(null)
-  const [apiKey,  setApiKey]  = useState('')
-  const [result,  setResult]  = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState(null)
+  const [front,     setFront]     = useState(null)
+  const [back,      setBack]      = useState(null)
+  const [apiKey,    setApiKey]    = useState('')
+  const [result,    setResult]    = useState(null)
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState(null)
+  const [uploadKey, setUploadKey] = useState(0)   // increment to reset UploadZones
+  const [version,   setVersion]   = useState(null)
+
+  // Fetch version info once on mount
+  useEffect(() => {
+    fetch('/version')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setVersion(data) })
+      .catch(() => {})
+  }, [])
 
   const handleSubmit = async () => {
     if (!front) return
@@ -233,6 +246,15 @@ export default function App() {
     }
   }
 
+  // Clear panels and result; API key is intentionally preserved
+  const handleClear = () => {
+    setFront(null)
+    setBack(null)
+    setResult(null)
+    setError(null)
+    setUploadKey(k => k + 1)  // force re-mount of UploadZones
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
 
@@ -243,6 +265,11 @@ export default function App() {
           <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 border border-amber-200">
             prototype
           </span>
+          {version && (
+            <span className="ml-auto text-xs text-gray-400 font-mono">
+              {version.commit}{version.environment && version.environment !== 'dev' ? ` · ${version.environment}` : ''}
+            </span>
+          )}
         </div>
       </header>
 
@@ -254,14 +281,14 @@ export default function App() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Front panel <span className="text-red-400">*</span>
             </label>
-            <UploadZone slot="front" label="Front panel" required onFile={setFront} />
+            <UploadZone key={`front-${uploadKey}`} slot="front" label="Front panel" required onFile={setFront} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Back panel{' '}
               <span className="text-gray-400 font-normal text-xs">(optional — improves coverage)</span>
             </label>
-            <UploadZone slot="back" label="Back panel" onFile={setBack} />
+            <UploadZone key={`back-${uploadKey}`} slot="back" label="Back panel" onFile={setBack} />
           </div>
         </div>
 
@@ -307,7 +334,19 @@ export default function App() {
         )}
 
         {/* Result */}
-        {!loading && result && <ResultPanel result={result} />}
+        {!loading && result && (
+          <>
+            <ResultPanel result={result} />
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={handleClear}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+              >
+                New check
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Footer */}
         <p className="mt-10 text-xs text-gray-400 text-center">
