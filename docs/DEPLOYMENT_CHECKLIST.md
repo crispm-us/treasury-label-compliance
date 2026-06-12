@@ -104,7 +104,7 @@ UI smoke tests (browser, via Railway URL) — screenshots in `docs/ui-screenshot
 | Glenfiddich 12 | front + back | spirits | UNVERIFIABLE | R-GW-02 warning — rotated GWS (expected) |
 | Delirium Tremens (bottle) | front + back | beer | NONCOMPLIANT | R-GW-02 error + R-MB-04 warning; partial verification ✓ |
 | Baci di Sangiovese | front + back | wine | COMPLIANT ✓ | 0 violations — clean European wine label |
-| Budweiser | front + back (reversed) | beer | COMPLIANT ✓ | Panels submitted in wrong order; merge robust for non-rotated labels |
+| Budweiser | front + back (reversed) | beer | COMPLIANT ✓ | ⚠ Robustness test only — panels submitted in wrong order intentionally; not a compliance verification |
 
 ### Mode A (application-matching) smoke tests (2026-06-12, Railway)
 
@@ -165,7 +165,7 @@ Synthetic labels are sufficient for demonstrating the architecture, but real lab
 |---|---|---|---|
 | Tito's Handmade Vodka (domestic TX, 1L) | `spirits/titos-vodka-front.jpg` | `spirits/titos-vodka-back.jpg` | GWS present on back ✓; 80 Proof / 40% ABV; Distilled from corn |
 | Jack Daniel's Old No. 7 — **EU market 70cl** *(front only)* | `spirits/jack-daniels-old-no-7-eu-front.jpg` | — | ⚠ Non-US label: "70cl 40% Vol." format, no GWS; standalone front-only test — verifies checker handles European labels gracefully |
-| Jack Daniel's Old No. 7 (domestic TN) | `spirits/jack-daniels-old-no-7-front.jpg` | `spirits/jack-daniels-old-no-7-back.jpg` | 200 ml miniature (front) / 750 ml (back) — different sizes photographed; no GWS visible on either panel |
+| Jack Daniel's Old No. 7 (domestic TN) | `spirits/jack-daniels-old-no-7-front.jpg` | `spirits/jack-daniels-old-no-7-back.jpg` | 200 ml miniature (front) / 750 ml (back) — different sizes photographed; no GWS visible on either panel — ⚠ deferred; GWS panel not photographed; excluded from active test matrix |
 | Glenfiddich 12 Year Old (imported Scotch, 750ml) | `spirits/glenfiddich-12-front.jpg` | `spirits/glenfiddich-12-back.jpg` | GWS present on back ✓ — rotated 90°; imported by William Grant & Sons, Inc. |
 | The Glenlivet 12 Years of Age (imported Scotch, 750ml) | `spirits/glenlivet-12-front.jpg` | `spirits/glenlivet-12-back.jpg` | GWS present on back ✓ — rotated 90°; front shows 40% ABV + 80 Proof; imported by The Glenlivet Distilling Company, NY |
 
@@ -192,7 +192,7 @@ The smoke test (`scripts/smoke-test.sh`) includes real-label calls for Henninger
 |---|---|---|---|
 | Auchere Sancerre 2024 (imported FR) | `wine/auchere-sancerre-front.jpg` | `wine/auchere-sancerre-back.jpg` | Importer: Planet Wine Inc |
 | Baci di Sangiovese 2020, Toscana IGT (imported IT) | `wine/baci-di-sangiovese-front.jpg` | `wine/baci-di-sangiovese-back.jpg` | Importer: Planet Wine Inc |
-| Brumes de La Tour Blanche 2021 Sauternes (imported FR) | `wine/brumes-tour-blanche-front.jpg` | `wine/brumes-tour-blanche-back-a.jpg` | 4 shots; `-back-c.jpg` explicitly shows `375 ml` net contents |
+| Brumes de La Tour Blanche 2021 Sauternes (imported FR) | `wine/brumes-tour-blanche-front.jpg` | `wine/brumes-tour-blanche-back-a.jpg` | Standard two-panel; canonical test uses front + back-a |
 | Loic Bulliat Bibine 2023, Beaujolais-Villages (imported FR) | `wine/bulliat-bibine-front.jpg` | `wine/bulliat-bibine-back.jpg` | Standard two-panel |
 | The "Ron Ron" Sauvignon 2023, Loire Valley (imported FR) | `wine/ron-ron-sauvignon-front.jpg` | `wine/ron-ron-sauvignon-back.jpg` | ⚠ GWS header in mixed case — R-GW-03 candidate |
 | Angry Orchard Iceman Hard Cider (domestic, 10% ABV) | `wine/angry-orchard-iceman-front.jpg` | `wine/angry-orchard-iceman-back.jpg` | Wine category (apple juice concentrate); CONTAINS SULFITES on label; GWS present on back ✓ |
@@ -210,13 +210,12 @@ For each product below, the "front-only" submission exercises the path where com
 | **Real labels — spirits** | | | |
 | Tito's Vodka | NONCOMPLIANT ✓ (R-GW-01, R-DS-04, R-DS-03) | **COMPLIANT** ✓ | GWS on back correctly found; schema_violations=4 (compliant verdict despite violations) |
 | JD Old No. 7 EU 70cl | NONCOMPLIANT ✓ (R-GW-01) | — (front only) | Non-US label; no GWS |
-| Jack Daniel's Old No. 7 | NONCOMPLIANT ✓ (R-GW-01) | NONCOMPLIANT ✓ (R-GW-01) | ⚠ No GWS visible in either photo — needs a third shot |
 | Glenfiddich 12 | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | GWS on back rotated 90°; EXIF correction allows verbatim body match; ⚠ Inconsistent across runs — prior API run gave NONCOMPLIANT (R-GW-02); reversed-panel submission (back→front slot) → NONCOMPLIANT (R-GW-02) — panel slot affects extraction of rotated images |
 | Glenlivet 12 | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ | GWS rotated 90°; low-confidence reads → all warnings → UNVERIFIABLE; specific warnings vary by run (R-GW-02/03, R-DS-06) — schema_violations=7 observed; verdict UNVERIFIABLE is stable across runs |
 | **Real labels — beer** | | | |
 | Henninger Lager | NONCOMPLIANT ✓ (R-GW-01, R-MB-04, R-MB-05 ×2) | UNVERIFIABLE ✓ (R-MB-04, R-MB-05 ×2) | Submitted as front+GWS; GWS found ✓; net contents and bottler info on third (importer) face |
 | Stiegl Radler | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | ⚠ Previous prediction was UNVERIFIABLE — model finds 2.5% ABV on label; actual COMPLIANT |
-| Budweiser | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ (R-MB-04) | ⚠ Panels submitted in reversed order (intentional test of panel-agnostic merge) — net contents not visible on either panel |
+| Budweiser | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ (R-MB-04) | ⚠ Robustness test only — panels reversed intentionally to verify panel-agnostic merge; net contents absent from both panels; UNVERIFIABLE is expected and correct; not a compliance signal |
 | Delirium Tremens bottle | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02, R-MB-04) | R-GW-02 body mismatch; schema_violations=8 (model returned 8 bare primitives — notable quality signal) |
 | Delirium Tremens can | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | Submitted as front+GWS; GWS body text on can fails verbatim check |
 | Heineken Original | NONCOMPLIANT ✓ (R-GW-01, R-MB-04, R-MB-05 ×2) | **COMPLIANT** ✓ | |
@@ -224,7 +223,7 @@ For each product below, the "front-only" submission exercises the path where com
 | **Real labels — wine** | | | |
 | Auchere Sancerre | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02, R-WN-05 ×2) | GWS body mismatch; bottler name+address not visible in photos |
 | Baci di Sangiovese | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | ⚠ Unexpected — predicted NONCOMPLIANT; model reads GWS and all required fields correctly; schema_violations=0 |
-| Brumes Tour Blanche | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02, partial) | Three back panels tested: back-a → NONCOMPLIANT (R-GW-02 error, R-WN-04 warning, schema_violations=13); back-b → UNVERIFIABLE (R-WN-04 + R-WN-05 warnings, schema_violations=13); back-c → NONCOMPLIANT (R-GW-03 error, R-GW-02 + R-WN-03 warnings, schema_violations=5); GWS body mismatch consistent across panels |
+| Brumes Tour Blanche | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | front + back-a; R-GW-02 error + R-WN-04 warning; schema_violations=13; GWS body mismatch |
 | Bulliat Bibine | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03) | GWS header not all-caps — mixed case on this French import label |
 | Ron Ron Sauvignon | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03, R-GW-02) | GWS header mixed-case + body mismatch |
 | Angry Orchard Iceman | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | Wine category; R-GW-03 observed in prior run — model stochastic on header; schema_violations=11 |
@@ -239,7 +238,7 @@ For each product below, the "front-only" submission exercises the path where com
 - [x] Run spirits real-label smoke tests — Tito's front+back COMPLIANT ✓; JD front+back NONCOMPLIANT (R-GW-01); Glenfiddich NONCOMPLIANT (R-GW-02); Glenlivet UNVERIFIABLE (low-confidence GWS read, rotated 90°)
 - [x] Run remaining `unverified*` rows — Budweiser, Delirium Tremens bottle, Auchere Sancerre, Bulliat Bibine confirmed (2026-06-12 via web UI)
 - [x] Run remaining `unverified*` rows: Sierra Nevada, Baci di Sangiovese, Brumes Tour Blanche confirmed (2026-06-12 via web UI) — all unverified* rows complete
-- [ ] Photograph GWS panel for Jack Daniel's — neither current image captures it
+- [x] Jack Daniel's GWS photo — deferred; domestic JD removed from active test matrix pending a clean GWS shot
 - [ ] Document smoke-test results and model anomalies (Mike's Harder abv_pct hallucination, Glenlivet UNVERIFIABLE) in `docs/project-log.md`
 
 ---
