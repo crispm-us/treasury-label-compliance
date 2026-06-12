@@ -18,10 +18,10 @@ Model / provider
 ----------------
 EXTRACTION_MODEL             LiteLLM model string for Layer 1 extraction.
                              Format: "<provider>/<model-name>"
-                             Default: anthropic/claude-haiku-4-5-20251001
+                             Default: gemini/gemini-2.5-flash-lite
                              Examples:
                                anthropic/claude-sonnet-4-6
-                               gemini/gemini-2.5-flash-lite
+                               anthropic/claude-haiku-4-5-20251001
                                openai/gpt-5.4-nano
 
 EXTRACTION_FALLBACK_MODELS   Comma-separated ordered list of fallback model strings.
@@ -29,7 +29,7 @@ EXTRACTION_FALLBACK_MODELS   Comma-separated ordered list of fallback model stri
                              error (anything except 400/401).  Leave empty to disable
                              fallback (default).
                              Three-tier default (see ADR-001):
-                               gemini/gemini-2.5-flash-lite,openai/gpt-5.4-nano
+                               anthropic/claude-haiku-4-5-20251001,openai/gpt-5.4-nano
 
 MODEL_TIMEOUT_SECONDS        Per-call timeout passed to litellm.completion().
                              Default: 30.0 seconds.
@@ -37,7 +37,7 @@ MODEL_TIMEOUT_SECONDS        Per-call timeout passed to litellm.completion().
                              vision calls with two images on Claude Haiku at P90 — observed
                              latency is 8–9 s. See docs/adr/001-vision-model-selection.md
                              and docs/latency-benchmarks.md for details.
-                             Recommended minimums: 20 s (Haiku), 12 s (Gemini Flash-Lite).
+                             Recommended minimums: 12 s (Gemini Flash-Lite), 20 s (Haiku).
 
 API keys (read by LiteLLM from the environment automatically)
 --------------
@@ -68,7 +68,7 @@ AUDIT_LOG_DIR: Path = REPO_ROOT / "audit_logs"
 # ---------------------------------------------------------------------------
 
 EXTRACTION_MODEL: str = os.getenv(
-    "EXTRACTION_MODEL", "anthropic/claude-haiku-4-5-20251001"
+    "EXTRACTION_MODEL", "gemini/gemini-2.5-flash-lite"
 )
 
 EXTRACTION_FALLBACK_MODELS: list[str] = [

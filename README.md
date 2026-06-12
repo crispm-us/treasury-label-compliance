@@ -55,7 +55,7 @@ cd treasury-label-compliance
 uv sync
 
 cp .env.example .env
-# edit .env — set ANTHROPIC_API_KEY (or whichever provider key you need)
+# edit .env — set GEMINI_API_KEY (or whichever key matches your configured model)
 
 uv run uvicorn backend.app.main:app --reload
 ```
@@ -220,7 +220,7 @@ See [`.env.example`](.env.example) for all environment variables. Key settings:
 | Variable | Default | Description |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | Required for the default model. Set the appropriate key for your provider. |
-| `EXTRACTION_MODEL` | `anthropic/claude-haiku-4-5-20251001` | LiteLLM model string for Layer 1 extraction (`provider/model-name` format). |
+| `EXTRACTION_MODEL` | `gemini/gemini-2.5-flash-lite` | LiteLLM model string for Layer 1 extraction (`provider/model-name` format). |
 | `EXTRACTION_FALLBACK_MODELS` | _(empty)_ | Comma-separated list of fallback models tried in order on retryable errors (e.g. `gemini/gemini-2.5-flash-lite,openai/gpt-5.4-nano`). |
 | `API_KEY` | _(empty)_ | When set, requires `X-API-Key` header on all requests. Use for Railway deployment. |
 | `AUDIT_ENABLED` | `true` | Set to `false` to disable JSONL audit log writes. |

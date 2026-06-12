@@ -6,7 +6,7 @@ parsed ExtractionResult ready for the Layer 2 compliance checker.
 
 LiteLLM provides a single interface across providers (Anthropic, Gemini,
 OpenAI, etc.).  The active model is set by the EXTRACTION_MODEL environment
-variable (default: anthropic/claude-haiku-4-5-20251001).  Fallback models
+variable (default: gemini/gemini-2.5-flash-lite).  Fallback models
 can be configured with EXTRACTION_FALLBACK_MODELS (comma-separated list).
 
 Errors from the model API (auth, rate-limit, server, JSON parse failure) are

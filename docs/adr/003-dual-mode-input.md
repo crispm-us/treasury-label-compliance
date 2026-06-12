@@ -16,18 +16,22 @@ Mode A is not in the spec but is valuable for development: it allows testing the
 
 ## Decision
 
-Implement both modes. They share a single compliance-checking service; the difference is upstream:
+Implement both modes as a single endpoint with an optional `application` JSON field. When `application` is absent the request runs Mode B (regulation-only); when present it runs Mode A (application-matching) after the same vision extraction step.
 
 ```
-Mode B (production):
+Mode B (default — regulation only):
   image → vision model → extracted fields → compliance_checker → result
+  Response: mode = "regulation_only"
 
-Mode A (test harness):
-  claimed fields + image → compliance_checker → result
-  (vision model skipped; image is stored but not analyzed)
+Mode A (application-matching):
+  image → vision model → extracted fields → compliance_checker
+                                          → application_checker (R-APP-01–R-APP-05) → result
+  Response: mode = "application_match"
 ```
 
-The API exposes both as a single endpoint; a request body field (`mode: "extract" | "verify"`) selects the path. The UI exposes Mode B by default and Mode A behind a clearly labeled "Developer / Test Mode" toggle.
+Mode A does **not** skip the vision model. It adds a second deterministic checker after Layer 2 that compares extracted field values against the declared values in the `application` JSON. The `mode` discriminator is implicit (presence/absence of `application`), not an explicit request field.
+
+The UI exposes Mode A via a collapsible toggle with an application catalog dropdown populated from `GET /v1/applications`.
 
 ## Consequences
 

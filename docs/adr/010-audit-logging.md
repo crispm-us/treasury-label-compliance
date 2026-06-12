@@ -114,8 +114,7 @@ For **any production or multi-tenant deployment**: Level A or Level B. The SHA-b
 
 The following elements from the original ADR-010 have not been implemented and are deferred:
 
-- `image_id` (SHA-256) field in the log and API receipt
-- `receipt` object in the API response (linking log entry to response for dispute resolution)
+- `image_id` (SHA-256) and `label_ref` fields: implemented as flat fields in both the API response (`front_sha256`, `back_sha256`, `front_label_ref`, `back_label_ref`) and the audit log. The original ADR specified these inside a nested `receipt` object; the implementation simplified to flat fields. `preprocessing_applied`, `backoff_attempt`, and `model_used` (as a receipt field distinct from `extraction_model`) remain unimplemented.
 - Image metadata (dimensions, bytes) in the log
 - Preprocessing record (depends on ADR-008 preprocessing pipeline, also not built)
 - Fallback trigger flag

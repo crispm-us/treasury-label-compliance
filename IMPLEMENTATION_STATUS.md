@@ -55,7 +55,7 @@ Wine (27 CFR Part 4):
 - **R-WN-09**: Sulfite declaration warning (cannot verify SO₂ level from image)
 
 ### Multi-provider model routing (ADR-001, ADR-002)
-LiteLLM is the provider abstraction layer (`extractor.py` uses `litellm.completion()`). Any LiteLLM-supported provider can be selected via the `EXTRACTION_MODEL` environment variable (format: `provider/model-name`, default: `anthropic/claude-haiku-4-5-20251001`). A sequential fallback list is configurable via `EXTRACTION_FALLBACK_MODELS` (comma-separated list of model strings). Non-retryable errors (401, 400) halt fallback immediately; all other errors (429, 500, network) try the next model in sequence. The `extraction_model` field in the API response reflects the model that actually produced the result, not the configured primary. Budget-capped API keys for Gemini Flash and GPT-4o are pending acquisition for end-to-end fallback testing.
+LiteLLM is the provider abstraction layer (`extractor.py` uses `litellm.completion()`). Any LiteLLM-supported provider can be selected via the `EXTRACTION_MODEL` environment variable (format: `provider/model-name`, default: `gemini/gemini-2.5-flash-lite`). A sequential fallback list is configurable via `EXTRACTION_FALLBACK_MODELS` (comma-separated list of model strings). Non-retryable errors (401, 400) halt fallback immediately; all other errors (429, 500, network) try the next model in sequence. The `extraction_model` field in the API response reflects the model that actually produced the result, not the configured primary. Budget-capped API keys for Gemini Flash and GPT-4o are pending acquisition for end-to-end fallback testing.
 
 ### API and infrastructure (ADR-004, ADR-006, ADR-010)
 - FastAPI with auto-generated OpenAPI docs (`/docs`)
