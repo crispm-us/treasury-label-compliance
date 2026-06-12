@@ -344,7 +344,7 @@ export default function App() {
                 ))}
               </select>
               <p className="mt-2 text-xs text-gray-400">
-                Label fields will be compared against the selected stub. Mismatches appear as R-APP-* issues.
+                The vision model extracts fields from the uploaded image as normal; extracted values are then compared against the selected stub. Mismatches appear as R-APP-* issues. A front panel image (<span className="text-red-400">*</span>) is still required.
               </p>
             </div>
           )}
