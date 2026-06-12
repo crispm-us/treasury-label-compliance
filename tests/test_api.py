@@ -48,7 +48,10 @@ def _no_audit(monkeypatch):
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client(monkeypatch) -> TestClient:
+    # Clear API_KEY so tests run without auth by default.
+    # Tests that specifically exercise auth behaviour use monkeypatch themselves.
+    monkeypatch.setattr("backend.app.main.API_KEY", "")
     return TestClient(app)
 
 
@@ -62,6 +65,18 @@ def test_healthz(client):
     body = r.json()
     assert body["status"] == "ok"
     assert "audit_enabled" in body
+
+
+def test_version(client):
+    r = client.get("/version")
+    assert r.status_code == 200
+    body = r.json()
+    assert "commit" in body
+    assert "environment" in body
+    assert "branch" in body
+    # Locally, Railway env vars are absent — defaults should be "dev" / ""
+    assert isinstance(body["commit"], str)
+    assert len(body["commit"]) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -82,10 +97,11 @@ def test_response_has_all_required_fields(client):
               "input_tokens", "output_tokens",
               "front_filename", "front_label_ref", "front_sha256",
               "back_filename", "back_label_ref", "back_sha256",
-              "schema_violations"):
+              "schema_violations", "duration_ms"):
         assert f in body, f"response missing field: {f!r}"
     assert body["input_tokens"] == 100
     assert body["output_tokens"] == 50
+    assert body["duration_ms"] is not None
 
 
 def test_issue_shape(client):

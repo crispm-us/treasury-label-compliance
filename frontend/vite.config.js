@@ -10,6 +10,7 @@ export default defineConfig({
     proxy: {
       '/v1': 'http://localhost:8000',
       '/healthz': 'http://localhost:8000',
+      '/version': 'http://localhost:8000',
     },
   },
   build: {
