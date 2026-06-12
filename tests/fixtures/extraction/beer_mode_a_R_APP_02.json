@@ -15,7 +15,7 @@
     "net_contents_us":      {"value": "12 FL OZ",                   "confidence": "high"},
     "bottler_name":         {"value": "Harbor Bay Brewing Co.",     "confidence": "high"},
     "bottler_address":      {"value": "550 Embarcadero St., San Francisco, CA 94105, USA", "confidence": "high"},
-    "country_of_origin":    {"value": "United States",              "confidence": "high"},
+    "country_of_origin":    {"value": "San Francisco, California",  "confidence": "high"},
     "gws_present":          {"value": true,                         "confidence": "high"},
     "gws_header":           {"value": "GOVERNMENT WARNING:",        "confidence": "high"},
     "gws_body":             {"value": "(1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.", "confidence": "high"},
