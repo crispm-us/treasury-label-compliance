@@ -28,7 +28,7 @@ Beer/malt beverages, distilled spirits, and wine. The checker selects rules base
 Federal TTB rules only — not state requirements, COLA approval status, or nutritional labeling. Rule references: [`docs/rules/`](rules/).
 
 **Is there a web UI?**
-Not in this prototype. The deliverable is API-only ([ADR-005](adr/005-frontend-framework.md) deferred).
+Yes. A React + Vite + Tailwind UI is built (`frontend/`) and served from the FastAPI backend at `/`. It supports drag-and-drop and click-to-pick upload for front and back panels, and displays structured compliance results. See [ADR-005](adr/005-frontend-framework.md) and [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md).
 
 **Which document should I trust if docs disagree?**
 **Code → `IMPLEMENTATION_STATUS.md` → `README.md` → ADRs → `requirements-analysis.md`**. See [docs/README.md](README.md).
@@ -176,7 +176,7 @@ Strict separation of AI extraction (Layer 1) from deterministic compliance check
 [docs/adr/](adr/) — decisions with explicit trade-offs and alternatives rejected. [docs/project-log.md](project-log.md) — stakeholder inputs, iteration, debugging (sanitize before public push per [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)).
 
 **How do I quickly assess architectural completeness?**
-Read [docs/adr/README.md](adr/README.md) status table alongside [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md). Built: two-layer pipeline (009), extraction schema (011), FastAPI (004), Railway target (006), partial audit (010), partial preprocessing (008). Not built: UI (005), batch (007), Mode A (003).
+Read [docs/adr/README.md](adr/README.md) status table alongside [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md). Built: two-layer pipeline (009), extraction schema (011), FastAPI (004), Railway target (006), partial audit (010), partial preprocessing (008), partial UI — React+Vite+Tailwind (005). Not built: batch (007), Mode A (003).
 
 **Why keep `requirements-analysis.md` if much is deferred?**
 Historical context for scope decisions and stakeholder constraints (no COLA integration, no persistent storage, verbatim GWS requirement). Not current behavior.

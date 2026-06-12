@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-06-09
-**Deciders:** Cris Sfnert
+**Deciders:** Cris Pedregal Martin
 
 ---
 

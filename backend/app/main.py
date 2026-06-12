@@ -27,6 +27,7 @@ from PIL import Image, ImageOps
 
 from fastapi import FastAPI, File, HTTPException, Security, UploadFile
 from fastapi.security import APIKeyHeader
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from backend.app.config import API_KEY, AUDIT_ENABLED, EXTRACTION_MODEL
@@ -345,3 +346,15 @@ async def check_label(
 @app.get("/healthz")
 async def healthz() -> dict:
     return {"status": "ok", "audit_enabled": AUDIT_ENABLED}
+
+
+# ---------------------------------------------------------------------------
+# Frontend — serve React app from frontend/dist/
+# ---------------------------------------------------------------------------
+# Mounted last so all API routes take precedence.
+# Conditional on the dist directory existing so the server still starts
+# during development before `npm run build` has been run.
+
+_FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+if _FRONTEND_DIST.exists():
+    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="frontend")

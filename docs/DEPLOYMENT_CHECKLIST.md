@@ -9,8 +9,13 @@ Pre-flight steps before making the repository public and deploying to Railway.
 - [x] **Delete internal dev notes:** `git rm docs/dev-environment-notes.md`
   ✓ Done — file removed; confirmed clean via `git ls-files docs/`.
 
-- [ ] **Review `docs/project-log.md`:**
-  This file documents all work sessions in detail and is intended to demonstrate the development process to interviewers. Read through it and decide which entries to include verbatim and which to redact. The file is ready to sanitize but has not been changed yet.
+- [ ] **Handle `docs/project-log.md` before public push:**
+  The file is being committed during development for personal reference. Before making the repo public, decide: (a) include it (sanitize content, then publish), or (b) strip it entirely. If stripping, a plain `git rm` is not sufficient — the file exists in prior commits. Remove it from full history with:
+  ```bash
+  git filter-repo --path docs/project-log.md --invert-paths
+  git push --force
+  ```
+  `git filter-repo` must be installed (`pip install git-filter-repo` or `brew install git-filter-repo`). Run this on Zulu immediately before making the repo public, not during development.
 
 - [x] **Verify `.gitignore` covers all sensitive paths:**
   ✓ Done — `audit_logs/`, `.env`, `.env.*` confirmed in `.gitignore`; `uv.lock` uncommented and committed.
@@ -140,23 +145,30 @@ For each product below, the "front-only" submission exercises the path where com
 
 | Product | Front-only | Front+back | Notes |
 |---|---|---|---|
+| **Synthetic labels** | | | |
+| Copper Creek Merlot synth (R-WN-09) | — | **COMPLIANT** ✓ | R-WN-09 is warning-only (cannot verify SO₂ level from image); COMPLIANT is correct; schema_violations=9 — notable: high violations but verdict unaffected |
+| Silverleaf Chardonnay synth (compliant baseline) | — | **COMPLIANT** ✓ | schema_violations=0 — cleanest extraction in corpus |
+| Blue Ridge Rye synth (compliant baseline, reversed panels) | — | **COMPLIANT** ✓ | Panels submitted reversed (back→front slot); schema_violations=11; merge correctly handles wrong slot |
+| **Real labels — spirits** | | | |
 | Tito's Vodka | NONCOMPLIANT ✓ (R-GW-01, R-DS-04, R-DS-03) | **COMPLIANT** ✓ | Only confirmed COMPLIANT two-panel spirits in corpus; GWS on back is correctly found |
 | JD Old No. 7 EU 70cl | NONCOMPLIANT ✓ (R-GW-01) | — (front only) | Non-US label; no GWS |
 | Jack Daniel's Old No. 7 | NONCOMPLIANT ✓ (R-GW-01) | NONCOMPLIANT ✓ (R-GW-01) | ⚠ No GWS visible in either photo — needs a third shot |
-| Glenfiddich 12 | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | GWS on back rotated 90°; header read at high confidence but body fails verbatim check |
+| Glenfiddich 12 | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | GWS on back rotated 90°; EXIF correction allows verbatim body match; ⚠ Inconsistent across runs — prior API run gave NONCOMPLIANT (R-GW-02); reversed-panel submission (back→front slot) → NONCOMPLIANT (R-GW-02) — panel slot affects extraction of rotated images |
 | Glenlivet 12 | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ (R-GW-03, R-GW-02, R-DS-06 — all warnings) | GWS rotated 90°; low-confidence reads → warnings only → UNVERIFIABLE; R-DS-06 = bottler address not found |
+| **Real labels — beer** | | | |
 | Henninger Lager | NONCOMPLIANT ✓ (R-GW-01, R-MB-04, R-MB-05 ×2) | UNVERIFIABLE ✓ (R-MB-04, R-MB-05 ×2) | Submitted as front+GWS; GWS found ✓; net contents and bottler info on third (importer) face |
 | Stiegl Radler | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | ⚠ Previous prediction was UNVERIFIABLE — model finds 2.5% ABV on label; actual COMPLIANT |
-| Budweiser | NONCOMPLIANT (predicted) | unverified* | |
-| Delirium Tremens bottle | NONCOMPLIANT (predicted) | unverified* | |
+| Budweiser | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ (R-MB-04) | ⚠ Panels submitted in reversed order (intentional test of panel-agnostic merge) — net contents not visible on either panel |
+| Delirium Tremens bottle | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02, R-MB-04) | R-GW-02 body mismatch; schema_violations=8 (model returned 8 bare primitives — notable quality signal) |
 | Delirium Tremens can | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | Submitted as front+GWS; GWS body text on can fails verbatim check |
 | Heineken Original | NONCOMPLIANT ✓ (R-GW-01, R-MB-04, R-MB-05 ×2) | **COMPLIANT** ✓ | |
 | Sierra Nevada Pale Ale | NONCOMPLIANT (predicted) | unverified* | |
-| Auchere Sancerre | NONCOMPLIANT (predicted) | unverified* | |
+| **Real labels — wine** | | | |
+| Auchere Sancerre | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02, R-WN-05 ×2) | GWS body mismatch; bottler name+address not visible in photos |
 | Baci di Sangiovese | NONCOMPLIANT (predicted) | unverified* | |
 | Brumes Tour Blanche | NONCOMPLIANT (predicted) | unverified* | Use front + back-a |
-| Bulliat Bibine | NONCOMPLIANT (predicted) | unverified* | |
-| Ron Ron Sauvignon | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03) | GWS header "Government Warning:" — not all-caps |
+| Bulliat Bibine | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03) | GWS header not all-caps — mixed case on this French import label |
+| Ron Ron Sauvignon | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03, R-GW-02) | GWS header mixed-case + body mismatch |
 | Angry Orchard Iceman | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03, R-GW-02) | Wine category; GWS header and body both fail verbatim check |
 | Mike's Harder Lemonade | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03, R-GW-02) | GWS header missing colon; body mismatch; also: model hallucinated abv_pct=5.0 (label says 8%) |
 
@@ -167,7 +179,8 @@ For each product below, the "front-only" submission exercises the path where com
 - [x] Run Henninger front + GWS smoke test — UNVERIFIABLE; GWS found ✓; net contents/bottler on third face
 - [x] Run Stiegl two-panel smoke test — COMPLIANT ✓ (model finds 2.5% ABV; earlier UNVERIFIABLE prediction was wrong)
 - [x] Run spirits real-label smoke tests — Tito's front+back COMPLIANT ✓; JD front+back NONCOMPLIANT (R-GW-01); Glenfiddich NONCOMPLIANT (R-GW-02); Glenlivet UNVERIFIABLE (low-confidence GWS read, rotated 90°)
-- [ ] Run remaining `unverified*` rows: Budweiser, Delirium Tremens bottle, Sierra Nevada, Auchere Sancerre, Baci di Sangiovese, Brumes Tour Blanche, Bulliat Bibine
+- [x] Run remaining `unverified*` rows — Budweiser, Delirium Tremens bottle, Auchere Sancerre, Bulliat Bibine confirmed (2026-06-12 via web UI)
+- [ ] Run remaining `unverified*` rows: Sierra Nevada, Baci di Sangiovese, Brumes Tour Blanche
 - [ ] Photograph GWS panel for Jack Daniel's — neither current image captures it
 - [ ] Document smoke-test results and model anomalies (Mike's Harder abv_pct hallucination, Glenlivet UNVERIFIABLE) in `docs/project-log.md`
 

@@ -233,3 +233,8 @@ audit_logs/
 
 # Sandbox/pytest stale cache directories
 pytest-cache-files-*/
+
+# Frontend — node_modules is never committed; dist IS committed so Railway
+# can serve it without a separate build step.
+frontend/node_modules/
+!frontend/dist/

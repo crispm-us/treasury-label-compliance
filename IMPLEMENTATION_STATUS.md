@@ -120,10 +120,12 @@ Implemented: EXIF rotation correction via `ImageOps.exif_transpose()` — critic
 
 Not implemented: resolution normalization, contrast enhancement for low-quality scans. See the Upload validation section above for the minimum-file-size / Pillow production upgrade path.
 
-### Frontend (ADR-005)
+### Frontend (ADR-005) — ⚠ Partial
 **ADR reference:** ADR-005
 
-ADR-005 selects a minimal web UI (file drag-and-drop, structured results display). Not implemented — the current deliverable is API-only.
+A React + Vite + Tailwind v4 UI is built (`frontend/`) and served from the FastAPI backend via `StaticFiles` at `/`. Drag-and-drop and click-to-pick upload are implemented for front and back panels. Structured compliance results (verdict, issues table, receipt metadata) are displayed.
+
+Not built: the base64 JSON endpoint specified in ADR-005 — the UI uses multipart `POST /v1/check` directly. The mobile-optimized layout is also deferred (desktop-first).
 
 ### Batch processing (ADR-007)
 **ADR reference:** ADR-007

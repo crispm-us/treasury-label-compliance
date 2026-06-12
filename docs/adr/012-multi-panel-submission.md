@@ -2,7 +2,7 @@
 
 **Status:** Deferred (two-panel built; N-panel design assessed, not implemented)
 **Date:** 2026-06-11
-**Deciders:** Cris Sfnert
+**Deciders:** Cris Pedregal Martin
 
 ---
 
