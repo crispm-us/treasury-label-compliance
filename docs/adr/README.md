@@ -16,7 +16,7 @@ One ADR per significant design decision. Read them for rationale and context. Fo
 |---|---|---|
 | [001](001-vision-model-selection.md) | Vision model selection, multi-provider strategy, SLA | ⚠ Partial — primary model is `gemini/gemini-2.5-flash-lite` (not original `gemini-2.0-flash`); fallback is manual iteration in `extractor.py`, not LiteLLM-native `fallbacks=`; SLA revised to 30 s default |
 | [002](002-litellm-library-vs-proxy.md) | LiteLLM Python library as model abstraction layer | ⚠ Partial — library used; but fallback via manual model iteration in `extractor.py`, not `litellm.completion(fallbacks=[...])` as designed |
-| [003](003-dual-mode-input.md) | Dual-mode input (extract / verify) | ❌ Not built — API is extraction-only; Mode A verify-harness not implemented; tests mock the extraction layer instead |
+| [003](003-dual-mode-input.md) | Dual-mode input (extract / verify) | ⚠ Partial — see `application_checker.py` and `test-labels/applications/`; file-based application JSON on `POST /v1/check`; COLA integration deferred |
 | [004](004-backend-framework.md) | Backend framework (FastAPI) | ✅ Built |
 | [005](005-frontend-framework.md) | Frontend framework (React + Vite + Tailwind) | ⚠ Partial — React + Vite + Tailwind v4 UI built and served from FastAPI; drag-and-drop panel upload, compliance result display, duration/version/clear implemented; base64 JSON endpoint and mobile layout deferred |
 | [006](006-deployment-target.md) | Deployment target (Railway) | ✅ Built |

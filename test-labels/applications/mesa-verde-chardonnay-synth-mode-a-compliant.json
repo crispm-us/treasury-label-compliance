@@ -1,0 +1,9 @@
+{
+  "_comment": "Application for Mesa Verde Chardonnay — compliant Mode A fixture. Label matches all application fields.",
+  "brand_name": "Mesa Verde Chardonnay",
+  "class_type": "Chardonnay",
+  "abv_pct": 13.5,
+  "net_contents": "750 mL",
+  "origin": "California",
+  "gws_required": true
+}

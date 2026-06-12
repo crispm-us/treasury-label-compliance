@@ -1,9 +1,9 @@
 # ADR-003: Dual-Mode Input Design
 
 Date: 2026-06-09
-Status: Accepted — **not implemented in prototype**
+Status: Accepted — **partial in prototype**
 
-> **Prototype status:** Mode A (verify submitted field values) was not built. The API implements Mode B only: image → vision extraction → compliance check. Tests mock the extraction layer to avoid model API calls on every test run — which achieves the same CI goal Mode A was designed for. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
+> **Prototype status:** Mode A application-matching is partially implemented: optional `application` JSON on `POST /v1/check` compares extracted label fields against declared application values (`application_checker.py`, R-APP-01–R-APP-05). Application stubs live in `test-labels/applications/`. Full COLA on-file integration is deferred. Mode B (image → vision extraction → compliance check) remains the default when `application` is omitted. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
 
 ## Context
 

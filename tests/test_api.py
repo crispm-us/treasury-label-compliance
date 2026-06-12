@@ -519,3 +519,41 @@ def test_readable_merge_uses_either_panel(client):
     )
     assert merged["panels_provided"] == ["back", "front"]
     assert merged["beverage_class"] == "beer"
+
+
+# ---------------------------------------------------------------------------
+# Mode A — application-matching
+# ---------------------------------------------------------------------------
+
+def test_mode_a_brand_mismatch(client):
+    application = json.dumps({
+        "brand_name": "Harbor Bay Lager",
+        "class_type": "American Lager",
+        "abv_pct": 5.0,
+        "net_contents": "12 fl oz",
+        "origin": "United States",
+    })
+    with patch("backend.app.main.extract", return_value=_ok("beer_mode_a_R_APP_01.json")):
+        r = client.post(
+            "/v1/check",
+            files={"front": ("front.jpg", _JPEG, "image/jpeg")},
+            data={"application": application},
+        )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["mode"] == "application_match"
+    rule_ids = {i["rule_id"] for i in body["issues"]}
+    assert "R-APP-01" in rule_ids
+
+
+def test_mode_b_no_application_regression(client):
+    with patch("backend.app.main.extract", return_value=_ok("beer_compliant.json")):
+        r = client.post(
+            "/v1/check",
+            files={"front": ("front.jpg", _JPEG, "image/jpeg")},
+        )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["mode"] == "regulation_only"
+    assert body["application_fields_provided"] == []
+    assert not any(i["rule_id"].startswith("R-APP-") for i in body["issues"])

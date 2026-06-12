@@ -84,7 +84,7 @@ bash scripts/smoke-test.sh
 
 ## Scope
 
-This prototype implements the two-layer extraction + compliance architecture with 86 tests, real-label smoke tests, a three-provider fallback chain, and a React + Vite web UI. Several features from the original spec (Mode A verify harness, batch upload, HEIC conversion) were deliberately deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
+This prototype implements the two-layer extraction + compliance architecture with 86+ tests, real-label smoke tests, a three-provider fallback chain, and a React + Vite web UI. Mode A is implemented (file-based application stubs; COLA integration deferred). Batch upload and HEIC conversion remain deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
 
 ---
 
@@ -110,6 +110,14 @@ curl -X POST http://localhost:8000/v1/check \
 curl -X POST http://localhost:8000/v1/check \
   -F "front=@test-labels/spirits/blue-ridge-rye-synth-front.jpg" \
   -F "back=@test-labels/spirits/blue-ridge-rye-synth-back.jpg"
+```
+
+### Mode A — application-matching
+
+```bash
+curl -X POST http://localhost:8000/v1/check \
+  -F "front=@label.jpg" \
+  -F 'application={"brand_name":"Harbor Bay Lager","abv_pct":5.0}'
 ```
 
 ### With API key (Railway deployment)

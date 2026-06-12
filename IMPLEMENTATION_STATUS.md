@@ -92,8 +92,19 @@ Schema violation tracking (see ADR-011 §Layer 1 Schema Violations):
 
 New cross-field rule applied after all beverage-class checks: if `abv_pct` and `abv_text` are both present with usable confidence, the numeric value parsed from `abv_text` is compared with `abv_pct`. A discrepancy > 0.2% fires R-META-02 at warning severity. Motivated by Mike's Harder hallucination: `abv_pct=5.0` at high confidence while `abv_text="8% ALC. BY VOL."` correctly read 8%.
 
+### Mode A application-matching (ADR-003) — partial
+Regulation checks (Layer 2) plus application-match checks when optional `application` JSON is supplied on `POST /v1/check`. Full COLA integration (lookup against TTB on-file records) remains out of scope.
+
+- `backend/app/models/application.py` — `ApplicationFields` schema
+- `backend/app/services/application_checker.py` — R-APP-01 through R-APP-05
+- `test-labels/applications/` — 9 application JSON stubs paired with Mode A synthetic labels and extraction fixtures
+
+Application JSON is assumed authoritative: null means the field was not declared for this product; non-null values are ground truth for comparison. The checker never validates application field values.
+
+Without `application`, Mode B behavior is unchanged (`mode: "regulation_only"`).
+
 ### Test suite
-- 86 tests, 0 failures on Python 3.14 (uv run --with pytest pytest)
+- 100 tests, 0 failures on Python 3.14 (uv run --with pytest pytest)
 - All extraction mocked — no API key required, no network calls
 - `client` fixture clears `API_KEY` via `monkeypatch.setattr("backend.app.main.API_KEY", "")` to isolate tests from host environment
 - `client` fixture calls `limiter._storage.reset()` before each test — see **slowapi test interference** below

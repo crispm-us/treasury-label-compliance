@@ -22,11 +22,11 @@ import uuid
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from PIL import Image, ImageOps
 
-from fastapi import FastAPI, File, HTTPException, Request, Security, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, Security, UploadFile
 from fastapi.security import APIKeyHeader
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -35,8 +35,10 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from backend.app.config import API_KEY, AUDIT_ENABLED, EXTRACTION_MODEL
+from backend.app.models.application import ApplicationFields, provided_field_names
+from backend.app.services.application_checker import check as check_application
 from backend.app.services.audit import write_entry
-from backend.app.services.compliance_checker import ComplianceResult, check_compliance
+from backend.app.services.compliance_checker import ComplianceResult, Issue, Verdict, check_compliance
 from backend.app.services.extractor import ExtractionError, extract
 
 # ---------------------------------------------------------------------------
@@ -194,6 +196,8 @@ class CheckResponse(BaseModel):
     request_id:            str
     timestamp:             str
     verdict:               str   # COMPLIANT | NONCOMPLIANT | UNVERIFIABLE | ERROR
+    mode:                  Literal["regulation_only", "application_match"]
+    application_fields_provided: list[str]
     beverage_class:        str | None
     issues:                list[IssueOut]
     extraction_model:      str
@@ -216,6 +220,14 @@ class CheckResponse(BaseModel):
     duration_ms:           float | None # server-side extraction wall time in milliseconds
 
 
+def _verdict_from_issues(issues: list[Issue]) -> Verdict:
+    if any(i.severity == "error" for i in issues):
+        return "NONCOMPLIANT"
+    if issues:
+        return "UNVERIFIABLE"
+    return "COMPLIANT"
+
+
 # ---------------------------------------------------------------------------
 # Route
 # ---------------------------------------------------------------------------
@@ -231,6 +243,10 @@ async def check_label(
     back: Annotated[
         UploadFile | None,
         File(description="Back panel image — optional; improves verification coverage"),
+    ] = None,
+    application: Annotated[
+        str | None,
+        Form(description="Optional COLA application JSON for Mode A application-matching"),
     ] = None,
 ) -> CheckResponse:
     """
@@ -249,6 +265,21 @@ async def check_label(
     now        = datetime.now(timezone.utc)
     timestamp  = now.isoformat()
     ts_compact = now.strftime("%Y%m%dT%H%M%S")  # for label_ref: 20260611T143022
+
+    # --- Mode A: optional application JSON --------------------------------------
+    mode: Literal["regulation_only", "application_match"] = "regulation_only"
+    application_fields: ApplicationFields | None = None
+    application_fields_provided: list[str] = []
+    if application is not None and application.strip():
+        try:
+            application_fields = ApplicationFields.model_validate_json(application)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"application: invalid JSON or schema — {exc}",
+            ) from exc
+        mode = "application_match"
+        application_fields_provided = provided_field_names(application_fields)
 
     # --- Read and validate uploads ----------------------------------------------
     front_bytes, front_media_type = await _read_validated(front, "front")
@@ -283,10 +314,18 @@ async def check_label(
         compliance     = ComplianceResult(verdict="ERROR", beverage_class=None, issues=[])
         extraction_dict = None
 
+    issues = list(compliance.issues)
+    verdict = compliance.verdict
+
+    # --- Mode A: application-matching (after Layer 2) --------------------------
+    if application_fields is not None and result is not None and verdict != "ERROR":
+        issues.extend(check_application(result.fields, application_fields))
+        verdict = _verdict_from_issues(issues)
+
     # --- partial_verification flag ---------------------------------------------
     partial_verification = (
-        compliance.verdict == "NONCOMPLIANT"
-        and any(i.not_found for i in compliance.issues)
+        verdict == "NONCOMPLIANT"
+        and any(i.not_found for i in issues)
     )
 
     # --- Audit -----------------------------------------------------------------
@@ -303,11 +342,11 @@ async def check_label(
             "usage":                  usage,
             "model_error":            model_error.to_dict() if model_error else None,
             "extraction_result":      extraction_dict,
-            "verdict":                compliance.verdict,
+            "verdict":                verdict,
             "beverage_class":         compliance.beverage_class,
             "issues": [
                 {"rule_id": i.rule_id, "severity": i.severity, "field": i.field}
-                for i in compliance.issues
+                for i in issues
             ],
             # Receipt fields (FR-07)
             "front_filename":    front.filename,
@@ -326,7 +365,9 @@ async def check_label(
     return CheckResponse(
         request_id=request_id,
         timestamp=timestamp,
-        verdict=compliance.verdict,
+        verdict=verdict,
+        mode=mode,
+        application_fields_provided=application_fields_provided,
         beverage_class=compliance.beverage_class,
         issues=[
             IssueOut(
@@ -337,7 +378,7 @@ async def check_label(
                 expected=i.expected,
                 not_found=i.not_found,
             )
-            for i in compliance.issues
+            for i in issues
         ],
         extraction_model=result.extraction_model if result is not None else EXTRACTION_MODEL,
         audit_logged=audit_logged_ok,

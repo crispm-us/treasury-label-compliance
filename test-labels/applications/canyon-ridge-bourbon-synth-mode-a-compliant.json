@@ -1,0 +1,9 @@
+{
+  "_comment": "Application for Canyon Ridge Bourbon — compliant Mode A fixture. Label matches all application fields.",
+  "brand_name": "Canyon Ridge Bourbon",
+  "class_type": "Straight Bourbon Whiskey",
+  "abv_pct": 45.0,
+  "net_contents": "750 mL",
+  "origin": "United States",
+  "gws_required": true
+}

@@ -1,0 +1,9 @@
+{
+  "_comment": "Application for Canyon Ridge Bourbon — R-APP-04 fixture. Label shows '1.0 L' net contents but application declares '750 mL'. Net contents mismatch.",
+  "brand_name": "Canyon Ridge Bourbon",
+  "class_type": "Straight Bourbon Whiskey",
+  "abv_pct": 45.0,
+  "net_contents": "750 mL",
+  "origin": "United States",
+  "gws_required": true
+}

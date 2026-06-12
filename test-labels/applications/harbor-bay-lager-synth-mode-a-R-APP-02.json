@@ -1,0 +1,9 @@
+{
+  "_comment": "Application for Harbor Bay Lager — R-APP-02 fixture. Label shows 5.8% ABV but application declares 5.0%. Delta 0.8% exceeds ±0.5% tolerance.",
+  "brand_name": "Harbor Bay Lager",
+  "class_type": "American Lager",
+  "abv_pct": 5.0,
+  "net_contents": "12 fl oz",
+  "origin": "United States",
+  "gws_required": true
+}

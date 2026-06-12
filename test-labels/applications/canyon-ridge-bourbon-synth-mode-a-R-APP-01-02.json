@@ -1,0 +1,9 @@
+{
+  "_comment": "Application for Canyon Ridge Bourbon — R-APP-01+02 fixture. Label shows 'Canyon Ridge Reserve' (brand mismatch) and 48.0% ABV (application says 45.0%; delta 3.0% exceeds ±0.5% tolerance).",
+  "brand_name": "Canyon Ridge Bourbon",
+  "class_type": "Straight Bourbon Whiskey",
+  "abv_pct": 45.0,
+  "net_contents": "750 mL",
+  "origin": "United States",
+  "gws_required": true
+}
