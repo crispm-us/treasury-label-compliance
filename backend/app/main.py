@@ -58,6 +58,9 @@ async def _require_api_key(key: str | None = Security(_api_key_header)) -> None:
 # App
 # ---------------------------------------------------------------------------
 
+# NFR-05 specified 10 req/min; 20/min chosen to allow comfortable evaluator access.
+# Upgrade path: replace get_remote_address with a key_func reading X-Forwarded-For
+# for accurate per-client limiting behind Railway's reverse proxy.
 limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(

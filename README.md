@@ -84,7 +84,7 @@ bash scripts/smoke-test.sh
 
 ## Scope
 
-This prototype implements the two-layer extraction + compliance architecture with 88 tests, real-label smoke tests, a three-provider fallback chain, and a React + Vite web UI. Several features from the original spec (Mode A verify harness, batch upload, HEIC conversion) were deliberately deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
+This prototype implements the two-layer extraction + compliance architecture with 86 tests, real-label smoke tests, a three-provider fallback chain, and a React + Vite web UI. Several features from the original spec (Mode A verify harness, batch upload, HEIC conversion) were deliberately deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
 
 ---
 
@@ -115,7 +115,7 @@ curl -X POST http://localhost:8000/v1/check \
 ### With API key (Railway deployment)
 
 ```bash
-curl -X POST https://<your-railway-url>/v1/check \
+curl -X POST https://web-production-b6163.up.railway.app/v1/check \
   -H "X-API-Key: <your-key>" \
   -F "front=@label-front.jpg"
 ```
@@ -157,7 +157,15 @@ For live API smoke testing against a running server, see [`scripts/smoke-test.sh
   "audit_logged": true,
   "partial_verification": false,
   "input_tokens": 2634,
-  "output_tokens": 478
+  "output_tokens": 478,
+  "duration_ms": 2210.5,
+  "front_filename": "label-front.jpg",
+  "front_label_ref": "label-front-20260101T000000Z",
+  "front_sha256": "a3f1...",
+  "back_filename": null,
+  "back_label_ref": null,
+  "back_sha256": null,
+  "schema_violations": 0
 }
 ```
 
@@ -168,6 +176,7 @@ For live API smoke testing against a running server, see [`scripts/smoke-test.sh
 | 401 | `API_KEY` is configured and `X-API-Key` header is missing or incorrect |
 | 413 | Image file exceeds the 10 MB per-panel limit |
 | 415 | Unsupported image format — either the declared `Content-Type` is not JPEG/PNG/WebP, or the file's magic bytes do not match a recognized image format |
+| 429 | Rate limit exceeded — `POST /v1/check` is limited to 20 requests/minute per IP |
 
 ### `GET /healthz`
 
@@ -183,7 +192,7 @@ All tests mock the extraction layer — no API key or network access required.
 uv run --with pytest pytest tests/ -v
 ```
 
-61 tests covering: verdict paths (compliant, noncompliant, unverifiable, error), all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401/400 no-retry, all-fallbacks-exhausted), non-dict JSON guard, upload size limit (413), magic-byte MIME validation (415), API key auth, token usage fields, partial verification flag, two-panel token summation, readable merge, empty/whitespace mandatory field bypass, proof mismatch at low confidence (warning), R-WN-08 empty-string appellation bypass, null beverage class (R-META-01), and GWS boolean-true with no extractable text. See `tests/test_api.py`, `tests/test_extractor.py`, and `tests/test_compliance_checker.py`.
+86 tests covering: verdict paths (compliant, noncompliant, unverifiable, error), all implemented rule IDs, extractor fallback logic (429 retry, 500 retry, 401/400 no-retry, all-fallbacks-exhausted), non-dict JSON guard, upload size limit (413), magic-byte MIME validation (415), API key auth, token usage fields, partial verification flag, two-panel token summation, readable merge, empty/whitespace mandatory field bypass, proof mismatch at low confidence (warning), R-WN-08 empty-string appellation bypass, null beverage class (R-META-01), GWS boolean-true with no extractable text, receipt fields (label_ref, sha256), schema_violations count, duration_ms, and GET /version. See `tests/test_api.py`, `tests/test_extractor.py`, and `tests/test_compliance_checker.py`.
 
 ---
 

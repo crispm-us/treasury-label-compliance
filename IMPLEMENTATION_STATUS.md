@@ -183,4 +183,4 @@ Note: Unicode normalization and R-GW-04 bold detection are superficially similar
 - Vintage year format validation
 - Appellation verification against approved AVA/GI lists
 - Multi-language label handling
-- Production deployment hardening (rate limiting, request signing, structured logging, monitoring)
+- Production deployment hardening (request signing, structured logging, monitoring, `X-Forwarded-For` IP extraction for rate limiting behind proxy)
