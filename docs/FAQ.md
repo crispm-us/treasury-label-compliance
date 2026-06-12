@@ -133,6 +133,17 @@ Batch ([ADR-007](adr/007-batch-processing-design.md)) is not built. Mode A appli
 **What comes back besides the verdict?**
 `request_id`, token usage, filenames, SHA-256 hashes, label references. Server-side JSONL audit logs in `audit_logs/` (gitignored, sensitive). See [ADR-010](adr/010-audit-logging.md).
 
+**Why does R-APP-01 (brand name match) produce false positives on real and synthetic labels?**
+R-APP-01 false positives are extraction errors — the vision model reads the wrong text element from the label — not a schema design problem. Two distinct failure modes are observed:
+
+1. **Producer entity name ≠ brand name**: The model reads the distillery or winery name (the most prominent entity text) instead of the brand name as declared in the COLA. Examples: "Canyon Ridge Distillery" extracted when the declared brand is "Canyon Ridge Bourbon"; "Mesa Verde Winery" extracted when the declared brand is "Mesa Verde Chardonnay". The distillery/winery name is a categorically different label element from the brand name.
+
+2. **Shortened brand form**: The model reads the shortened or prominent form of the brand rather than the full declared string. Example: "Tito's" extracted when the COLA-declared brand is "Tito's Handmade Vodka". The label displays "TITO'S" in large type and "Handmade Vodka" as a secondary descriptor — the model treats only the large text as the brand name.
+
+A two-field schema approach (analogous to the `origin_as_stated` / `origin_iso2_country` design for R-APP-05) does not apply here. The origin split works because geography has a legitimate regulatory hierarchy — a label may correctly declare origin at any level (state, country). There is no analogous hierarchy for brand names: the COLA application has one `brand_name` field and the label must reproduce it exactly. The two cases are categorically different: origin is a multi-level representation problem; brand name is an extraction accuracy problem.
+
+The production fixes are: (1) improve the extraction prompt to explicitly distinguish brand name from producer/entity name — the model should be told that `brand_name` is the registered product identifier, not the winery, distillery, or importer name; (2) optionally, a normalized substring heuristic as a stopgap — if the extracted brand is a case-normalized substring of the declared brand or vice versa, treat as tentative match — this would resolve the "Tito's" ≠ "Tito's Handmade Vodka" case but not the entity-name confusion. Neither fix is implemented in this prototype. R-APP-01 false-positive results should be treated as informational pending extraction prompt improvement.
+
 **Why does R-APP-05 (origin match) flag labels that say "American" or show a state or city name?**
 R-APP-05 does exact string comparison between the vision model's `country_of_origin` extraction and the declared stub value (typically `"United States"`). The model frequently extracts `"American"`, `"Kentucky"`, `"Lawrenceburg, KY"`, or a country abbreviation — all genuinely US origin — but none matches the declared string.
 

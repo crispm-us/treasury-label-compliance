@@ -102,6 +102,14 @@ Regulation checks (Layer 2) plus application-match checks when optional `applica
 
 Application JSON is assumed authoritative: null means the field was not declared for this product; non-null values are ground truth for comparison. The checker never validates application field values.
 
+**Known R-APP false positive patterns (observed in Railway smoke tests, 2026-06-12):**
+
+- **R-APP-01 (brand name)** — high false-positive rate. Two failure modes: (1) model extracts the distillery or winery name (the most prominent entity text) instead of the COLA-declared brand name — e.g. "Canyon Ridge Distillery" vs "Canyon Ridge Bourbon", "Mesa Verde Winery" vs "Mesa Verde Chardonnay"; (2) model extracts a shortened form — e.g. "Tito's" vs "Tito's Handmade Vodka". Root cause is extraction accuracy, not schema design. Production fix: improve the extraction prompt to distinguish brand name from producer entity name. A normalized substring heuristic (if extracted brand is a substring of declared brand or vice versa, treat as tentative match) would address case (2) but not case (1). See FAQ §4 for the full analysis of why a two-field schema approach does not apply here.
+
+- **R-APP-05 (origin)** — high false-positive rate. Root cause: exact string comparison against a single declared origin value, while the vision model extracts origin at varying specificity levels (state name, city+state, "American", etc.). Fixed in the `origin_as_stated` / `origin_iso2_country` redesign — see `application.py` and FAQ §4.
+
+- **R-APP-04 (net contents)** — one miss observed: label "1.0 L" vs stub "750 mL" not detected, likely because the model returned `not_found` for `net_contents` on that synthetic label. Unit-parsing (liters ↔ milliliters) is not implemented; the checker does normalized string comparison only.
+
 Without `application`, Mode B behavior is unchanged (`mode: "regulation_only"`).
 
 ### Test suite
