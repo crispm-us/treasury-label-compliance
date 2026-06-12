@@ -131,7 +131,7 @@ Set `API_KEY`; send `X-API-Key` on every request. Unset locally = no auth. `POST
 Batch ([ADR-007](adr/007-batch-processing-design.md)) is not built. Mode A application-matching ([ADR-003](adr/003-dual-mode-input.md)) is partially implemented: optional `application` JSON on `POST /v1/check` (R-APP-01–R-APP-05), UI COLA stub toggle, and `GET /v1/applications` catalog — extraction still runs via the vision model; full COLA on-file integration is deferred. Tests mock extraction.
 
 **What comes back besides the verdict?**
-`request_id`, token usage, filenames, SHA-256 hashes, label references. Server-side JSONL audit logs in `audit_logs/` (gitignored, sensitive). See [ADR-010](adr/010-audit-logging.md).
+`request_id`, `duration_ms` (server-side extraction time in milliseconds), token usage, filenames, SHA-256 hashes, label references. Server-side JSONL audit logs in `audit_logs/` (gitignored, sensitive). See [ADR-010](adr/010-audit-logging.md).
 
 **Why does R-APP-01 (brand name match) produce false positives on real and synthetic labels?**
 R-APP-01 false positives are extraction errors — the vision model reads the wrong text element from the label — not a schema design problem. Two distinct failure modes are observed:
@@ -209,7 +209,7 @@ Historical context for scope decisions and stakeholder constraints (no COLA inte
 Human review queue for NONCOMPLIANT/UNVERIFIABLE; schema version gate; Unicode normalization for GWS; calibrated R-GW-04 bold check; full image preprocessing; COLA integration; net-contents parsing; appellation verification; geo-normalization service for R-APP-05 origin matching (see Part I §4); deployment hardening. Listed in [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md).
 
 **How was quality validated beyond unit tests?**
-Synthetic labels with embedded defect markers; real bottle/can photographs; `scripts/smoke-test.sh`; `scripts/benchmark-latency.sh`. Real labels exposed rotation, multi-panel, and hallucination edge cases documented in [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md) and [project-log.md](project-log.md).
+Synthetic labels with embedded defect markers; real bottle/can photographs; `scripts/smoke-test.sh`; `scripts/benchmark-latency.sh`. Real labels exposed rotation, multi-panel, and hallucination edge cases documented in [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md).
 
 **What known failure modes should an evaluator probe?**
 GWS OCR false positives on punctuation (R-GW-03); hallucinated GWS body on rotated images (Glenlivet); ABV numeric hallucination vs correct text (Mike's Harder); three-face cans missing net contents when only two panels submitted (Henninger). These motivate human review, not algorithmic fixes alone.
