@@ -36,7 +36,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from backend.app.config import API_KEY, AUDIT_ENABLED, EXTRACTION_MODEL, NTFY_TOPIC
+from backend.app.config import API_KEY, AUDIT_ENABLED, EXTRACTION_MODEL, NTFY_TOPIC, RATE_LIMIT
 from backend.app.models.application import ApplicationFields, provided_field_names
 from backend.app.services.application_checker import check as check_application
 from backend.app.services.audit import write_entry
@@ -62,7 +62,8 @@ async def _require_api_key(key: str | None = Security(_api_key_header)) -> None:
 # App
 # ---------------------------------------------------------------------------
 
-# NFR-05 specified 10 req/min; 20/min chosen to allow comfortable evaluator access.
+# Per-IP rate limit on POST /v1/check — configurable via RATE_LIMIT_PER_MIN (default 60).
+# NFR-05 originally specified 10 req/min; raised over time for evaluator access and smoke tests.
 # Upgrade path: replace get_remote_address with a key_func reading X-Forwarded-For
 # for accurate per-client limiting behind Railway's reverse proxy.
 limiter = Limiter(key_func=get_remote_address)
@@ -262,7 +263,7 @@ def _notify_ntfy(verdict: str, beverage_class: str | None, duration_ms: float, r
 # ---------------------------------------------------------------------------
 
 @app.post("/v1/check", response_model=CheckResponse, dependencies=[Security(_require_api_key)])
-@limiter.limit("20/minute")
+@limiter.limit(RATE_LIMIT)
 async def check_label(
     background_tasks: BackgroundTasks,
     request: Request,

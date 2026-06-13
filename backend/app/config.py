@@ -14,6 +14,10 @@ API_KEY                      Optional bearer key for the deployed API.
                              Leave unset (or empty) for local development — no auth required.
                              Set in the Railway environment dashboard before sharing the URL.
 
+RATE_LIMIT_PER_MIN           Per-IP rate limit on POST /v1/check (requests per minute).
+                             Default: 60. Set lower (e.g. 30) on Railway for cost control;
+                             raise or remove for local smoke testing.
+
 NTFY_TOPIC                   Optional ntfy.sh topic for push notifications after each
                              POST /v1/check.  Leave empty (default) to disable.
                              Choose an unguessable, URL-safe string — the topic name is
@@ -89,6 +93,8 @@ MODEL_TIMEOUT_SECONDS: float = float(os.getenv("MODEL_TIMEOUT_SECONDS", "30"))
 # ---------------------------------------------------------------------------
 
 API_KEY: str = os.getenv("API_KEY", "")  # empty = no auth required
+
+RATE_LIMIT: str = f"{os.getenv('RATE_LIMIT_PER_MIN', '60')}/minute"
 
 # ---------------------------------------------------------------------------
 # Push notifications (optional — ntfy.sh)

@@ -62,7 +62,7 @@ LiteLLM is the provider abstraction layer (`extractor.py` uses `litellm.completi
 - `GET /healthz` health check
 - `GET /version` — returns `{commit, environment, branch}` from Railway-injected env vars (`RAILWAY_GIT_COMMIT_SHA[:7]`, `RAILWAY_ENVIRONMENT_NAME`, `RAILWAY_GIT_BRANCH`); falls back to `"dev"` in local dev
 - Optional `X-API-Key` authentication (enforced when `API_KEY` env var is set; bypassed for local dev)
-- Per-IP rate limiting on `POST /v1/check`: **20 requests/minute** via `slowapi`. Returns HTTP 429 when exceeded. `GET /healthz` and `GET /version` are not rate-limited. Behind Railway's reverse proxy, `get_remote_address` reads `request.client.host` — if the real client IP is needed, a custom `key_func` reading `X-Forwarded-For` is the upgrade path (not required for current 1–2 user audience).
+- Per-IP rate limiting on `POST /v1/check`: configurable via `RATE_LIMIT_PER_MIN` (default **60 requests/minute**) via `slowapi`. Returns HTTP 429 when exceeded. `GET /healthz` and `GET /version` are not rate-limited. Behind Railway's reverse proxy, `get_remote_address` reads `request.client.host` — if the real client IP is needed, a custom `key_func` reading `X-Forwarded-For` is the upgrade path (not required for current 1–2 user audience).
 - `CheckResponse` includes `duration_ms: float | None` — server-side extraction wall time in milliseconds (also stored in audit log as `extraction_duration_ms`)
 - JSONL audit log with per-day rotation and thread-safe writes (`audit_logs/YYYY-MM-DD.jsonl`); includes token usage per request
 - `AUDIT_ENABLED` flag for disabling writes in tests
@@ -123,14 +123,14 @@ Without `application`, Mode B behavior is unchanged (`mode: "regulation_only"`).
 
 ### slowapi test interference
 
-`slowapi` uses an in-memory `MemoryStorage` instance that is a **module-level singleton** — the same object lives for the entire pytest process. This causes silent cross-test contamination: each call to `POST /v1/check` increments the counter for the `"testclient"` key (the fixed remote address Starlette's `TestClient` presents). Once 20 calls accumulate within the rolling one-minute window, every subsequent test that hits the endpoint gets HTTP 429 instead of the expected response — producing `KeyError` or status assertion failures with no obvious connection to rate limiting.
+`slowapi` uses an in-memory `MemoryStorage` instance that is a **module-level singleton** — the same object lives for the entire pytest process. This causes silent cross-test contamination: each call to `POST /v1/check` increments the counter for the `"testclient"` key (the fixed remote address Starlette's `TestClient` presents). Once the configured per-minute limit is exceeded within the rolling window, every subsequent test that hits the endpoint gets HTTP 429 instead of the expected response — producing `KeyError` or status assertion failures with no obvious connection to rate limiting.
 
 **Fix in place**: the `client` fixture calls `limiter._storage.reset()` before each test, clearing all counters. This is sufficient because `TestClient` calls are synchronous and instantaneous (no real time passes between tests).
 
 **What else can trigger this:**
 
 - **Adding new tests that call `/v1/check`**: each new test adds to the count within the minute window. As long as `client` is used as a fixture (not constructed inline), the reset runs automatically and each test starts clean.
-- **Tests that construct `TestClient(app)` directly** (bypassing the `client` fixture): the storage is not reset. If such a test calls `/v1/check` more than 20 times without resetting, subsequent tests will see 429. Always use the `client` fixture.
+- **Tests that construct `TestClient(app)` directly** (bypassing the `client` fixture): the storage is not reset. If such a test calls `/v1/check` more times than `RATE_LIMIT_PER_MIN` allows without resetting, subsequent tests will see 429. Always use the `client` fixture.
 - **`pytest-xdist` parallel execution**: workers share the same Python process memory — if ever adopted, the storage would need to be worker-local or the limiter disabled in tests via `RATELIMIT_ENABLED=0` env var (checked at import time, so must be set before `backend.app.main` is imported).
 - **`limiter._storage` is a private attribute**: if slowapi changes its internal API, the reset call will break with an `AttributeError`. The public alternative is to set `RATELIMIT_ENABLED=0` as an environment variable before importing the app — this disables the limiter entirely for the test process, which is safe since rate limiting is an infrastructure concern, not business logic.
 

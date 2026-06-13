@@ -187,7 +187,7 @@ For live API smoke testing against a running server, see [`scripts/smoke-test.sh
 | 401 | `API_KEY` is configured and `X-API-Key` header is missing or incorrect |
 | 413 | Image file exceeds the 10 MB per-panel limit |
 | 415 | Unsupported image format — either the declared `Content-Type` is not JPEG/PNG/WebP, or the file's magic bytes do not match a recognized image format |
-| 429 | Rate limit exceeded — `POST /v1/check` is limited to 20 requests/minute per IP |
+| 429 | Rate limit exceeded — `POST /v1/check` is limited to `RATE_LIMIT_PER_MIN` requests/minute per IP (default: 60) |
 
 ### `GET /healthz`
 
@@ -224,6 +224,7 @@ See [`.env.example`](.env.example) for all environment variables. Key settings:
 | `EXTRACTION_FALLBACK_MODELS` | _(empty)_ | Comma-separated list of fallback models tried in order on retryable errors (e.g. `anthropic/claude-haiku-4-5-20251001,openai/gpt-5.4-nano`). |
 | `API_KEY` | _(empty)_ | When set, requires `X-API-Key` header on all requests. Use for Railway deployment. |
 | `NTFY_TOPIC` | _(empty)_ | ntfy.sh topic name for push notifications on each `/v1/check`. Leave empty to disable. See [ntfy.sh](https://ntfy.sh). Use a URL-safe, unguessable string. |
+| `RATE_LIMIT_PER_MIN` | `60` | Per-IP rate limit on `POST /v1/check`. Lower on Railway for cost control; raise for local smoke testing. |
 | `AUDIT_ENABLED` | `true` | Set to `false` to disable JSONL audit log writes. |
 
 Provider API keys (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, etc.) are read automatically by LiteLLM when the corresponding model is configured.

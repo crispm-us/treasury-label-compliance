@@ -129,7 +129,7 @@ Python ≥ 3.10, [uv](https://github.com/astral-sh/uv), copy `.env.example` → 
 JPEG, PNG, WebP; 10 MB per panel. HEIC/TIFF/PDF return 415. See [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md), [ADR-008](adr/008-image-preprocessing.md).
 
 **Deployment auth?**
-Set `API_KEY`; send `X-API-Key` on `POST /v1/check`. Unset locally = no auth. `POST /v1/check` is also rate-limited at 20 requests/minute per IP (slowapi); returns HTTP 429 on breach. `GET /healthz` and `GET /version` are unrestricted. These are prototype deployment artifacts, not production design recommendations — see Part II §5, *Which features are prototype submission artifacts and would be absent or different in production?*
+Set `API_KEY`; send `X-API-Key` on `POST /v1/check`. Unset locally = no auth. `POST /v1/check` is also rate-limited per IP via `slowapi` (`RATE_LIMIT_PER_MIN`, default 60/minute); returns HTTP 429 on breach. `GET /healthz` and `GET /version` are unrestricted. These are prototype deployment artifacts, not production design recommendations — see Part II §5, *Which features are prototype submission artifacts and would be absent or different in production?*
 
 **Tests without an API key?**
 `uv run --with pytest pytest tests/ -v` — extraction is mocked throughout.
@@ -233,7 +233,7 @@ Three features exist because this is a public prototype deployment under evaluat
 
 **API key field in the UI.** The Railway endpoint is publicly reachable — anyone with the URL can call it. `API_KEY` / `X-API-Key` limits access to authorized users without requiring evaluators to use curl. The UI key-entry field is a usability accommodation for that handoff. In production, authentication is at the network or service layer (OAuth, mTLS, a reverse proxy's auth middleware) and never appears as a form field in the application UI.
 
-**Per-IP rate limiting (slowapi, 20 req/min).** Each extraction call has real provider cost on a publicly reachable deployment. The rate limiter prevents accidental or intentional cost overruns from an unprotected public URL. In production, rate limiting is an API gateway or load-balancer concern, governed by authenticated client identity and service-level agreements — not an in-process per-IP counter.
+**Per-IP rate limiting (slowapi, configurable via `RATE_LIMIT_PER_MIN`, default 60 req/min).** Each extraction call has real provider cost on a publicly reachable deployment. The rate limiter prevents accidental or intentional cost overruns from an unprotected public URL. In production, rate limiting is an API gateway or load-balancer concern, governed by authenticated client identity and service-level agreements — not an in-process per-IP counter.
 
 **`AUDIT_ENABLED=false` on Railway.** Railway's filesystem is ephemeral: a redeploy wipes it. Leaving audit logging enabled against a local JSONL file would produce logs that silently disappear. The flag is set to `false` to avoid false confidence that a record is being retained. Production deployment ships logs to a structured sink (Cloud Logging, Datadog, etc.) rather than a local file — see [ADR-010](adr/010-audit-logging.md).
 
