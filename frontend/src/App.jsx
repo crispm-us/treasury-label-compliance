@@ -11,6 +11,11 @@ const VERDICT_STYLE = {
   ERROR:        { bar: 'bg-gray-400',   badge: 'bg-gray-100 text-gray-700 border-gray-300'     },
 }
 
+// Human-friendly display labels (API verdict strings are unchanged)
+const VERDICT_LABEL = {
+  UNVERIFIABLE: 'REVIEW',
+}
+
 const SEVERITY_BADGE = {
   error:   'bg-red-100 text-red-700',
   warning: 'bg-amber-100 text-amber-700',
@@ -117,7 +122,7 @@ function ResultPanel({ result }) {
       {/* Verdict header */}
       <div className="flex flex-wrap items-center gap-2 px-5 py-4 border-b border-gray-100">
         <span className={`rounded-lg border px-3 py-1 text-lg font-bold tracking-wide ${sty.badge}`}>
-          {result.verdict}
+          {VERDICT_LABEL[result.verdict] ?? result.verdict}
         </span>
         {result.partial_verification && (
           <span className="rounded-md bg-orange-100 border border-orange-200 px-2 py-0.5 text-xs font-medium text-orange-700">

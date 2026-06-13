@@ -43,7 +43,7 @@ Yes. A React + Vite + Tailwind UI is built (`frontend/`) and served from the Fas
 |---|---|
 | `COMPLIANT` | All checked rules pass |
 | `NONCOMPLIANT` | At least one definitive violation (error severity) |
-| `UNVERIFIABLE` | No errors, but something could not be verified |
+| `UNVERIFIABLE` | No errors, but something could not be verified — displayed as **REVIEW** in the UI |
 | `ERROR` | Image unreadable or model/API failure |
 
 See [README.md](../README.md) and [ADR-011](adr/011-extraction-schema.md).
