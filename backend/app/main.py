@@ -18,6 +18,7 @@ import asyncio
 import dataclasses
 import hashlib
 import json
+import logging
 import secrets
 import uuid
 from datetime import datetime, timezone
@@ -27,7 +28,7 @@ from typing import Annotated, Literal
 
 from PIL import Image, ImageOps
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, Security, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, Security, UploadFile
 from fastapi.security import APIKeyHeader
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -35,7 +36,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from backend.app.config import API_KEY, AUDIT_ENABLED, EXTRACTION_MODEL
+from backend.app.config import API_KEY, AUDIT_ENABLED, EXTRACTION_MODEL, NTFY_TOPIC
 from backend.app.models.application import ApplicationFields, provided_field_names
 from backend.app.services.application_checker import check as check_application
 from backend.app.services.audit import write_entry
@@ -230,12 +231,40 @@ def _verdict_from_issues(issues: list[Issue]) -> Verdict:
 
 
 # ---------------------------------------------------------------------------
+# Push notification helper (ntfy.sh)
+# ---------------------------------------------------------------------------
+
+def _notify_ntfy(verdict: str, beverage_class: str | None, duration_ms: float, request_id: str) -> None:
+    """Fire a push notification to ntfy.sh. Runs in a background thread; never raises."""
+    if not NTFY_TOPIC:
+        return
+    tag = {
+        "COMPLIANT":    "white_check_mark",
+        "NONCOMPLIANT": "rotating_light",
+        "UNVERIFIABLE": "question",
+        "ERROR":        "warning",
+    }.get(verdict, "bell")
+    body = f"{beverage_class or 'unknown'} · {round(duration_ms)} ms · {request_id[:8]}"
+    try:
+        import httpx
+        httpx.post(
+            f"https://ntfy.sh/{NTFY_TOPIC}",
+            content=body.encode(),
+            headers={"X-Title": verdict, "X-Tags": tag},
+            timeout=5,
+        )
+    except Exception as exc:
+        logging.debug("ntfy notification failed: %s", exc)
+
+
+# ---------------------------------------------------------------------------
 # Route
 # ---------------------------------------------------------------------------
 
 @app.post("/v1/check", response_model=CheckResponse, dependencies=[Security(_require_api_key)])
 @limiter.limit("20/minute")
 async def check_label(
+    background_tasks: BackgroundTasks,
     request: Request,
     front: Annotated[
         UploadFile,
@@ -363,6 +392,11 @@ async def check_label(
         audit_logged_ok = False
 
     # --- Response --------------------------------------------------------------
+    if NTFY_TOPIC:
+        background_tasks.add_task(
+            _notify_ntfy, verdict, compliance.beverage_class, duration_ms, request_id
+        )
+
     return CheckResponse(
         request_id=request_id,
         timestamp=timestamp,

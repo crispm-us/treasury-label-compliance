@@ -14,6 +14,11 @@ API_KEY                      Optional bearer key for the deployed API.
                              Leave unset (or empty) for local development — no auth required.
                              Set in the Railway environment dashboard before sharing the URL.
 
+NTFY_TOPIC                   Optional ntfy.sh topic for push notifications after each
+                             POST /v1/check.  Leave empty (default) to disable.
+                             Choose an unguessable, URL-safe string — the topic name is
+                             the only access control.  See https://ntfy.sh.
+
 Model / provider
 ----------------
 EXTRACTION_MODEL             LiteLLM model string for Layer 1 extraction.
@@ -84,6 +89,15 @@ MODEL_TIMEOUT_SECONDS: float = float(os.getenv("MODEL_TIMEOUT_SECONDS", "30"))
 # ---------------------------------------------------------------------------
 
 API_KEY: str = os.getenv("API_KEY", "")  # empty = no auth required
+
+# ---------------------------------------------------------------------------
+# Push notifications (optional — ntfy.sh)
+# ---------------------------------------------------------------------------
+
+# When set, a background notification is sent to https://ntfy.sh/<NTFY_TOPIC>
+# after every POST /v1/check.  Leave empty (default) to disable.
+# Choose an unguessable string — the topic name is the only access control.
+NTFY_TOPIC: str = os.getenv("NTFY_TOPIC", "")
 
 # ---------------------------------------------------------------------------
 # Layer 1 schema enforcement

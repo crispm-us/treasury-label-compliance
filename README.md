@@ -223,6 +223,7 @@ See [`.env.example`](.env.example) for all environment variables. Key settings:
 | `EXTRACTION_MODEL` | `gemini/gemini-2.5-flash-lite` | LiteLLM model string for Layer 1 extraction (`provider/model-name` format). |
 | `EXTRACTION_FALLBACK_MODELS` | _(empty)_ | Comma-separated list of fallback models tried in order on retryable errors (e.g. `anthropic/claude-haiku-4-5-20251001,openai/gpt-5.4-nano`). |
 | `API_KEY` | _(empty)_ | When set, requires `X-API-Key` header on all requests. Use for Railway deployment. |
+| `NTFY_TOPIC` | _(empty)_ | ntfy.sh topic name for push notifications on each `/v1/check`. Leave empty to disable. See [ntfy.sh](https://ntfy.sh). Use a URL-safe, unguessable string. |
 | `AUDIT_ENABLED` | `true` | Set to `false` to disable JSONL audit log writes. |
 
 Provider API keys (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, etc.) are read automatically by LiteLLM when the corresponding model is configured.

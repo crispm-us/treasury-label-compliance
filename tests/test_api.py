@@ -43,8 +43,9 @@ def _err(status_code: int | None, message: str) -> tuple:
 
 @pytest.fixture(autouse=True)
 def _no_audit(monkeypatch):
-    """Disable audit writes for all tests in this module."""
+    """Disable audit writes and ntfy notifications for all tests in this module."""
     monkeypatch.setattr("backend.app.main.write_entry", lambda *a, **kw: None)
+    monkeypatch.setattr("backend.app.main.NTFY_TOPIC", "")
 
 
 @pytest.fixture
