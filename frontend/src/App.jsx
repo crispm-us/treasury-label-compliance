@@ -21,6 +21,95 @@ const SEVERITY_BADGE = {
   warning: 'bg-amber-100 text-amber-700',
 }
 
+const BATCH_ACCEPT = 'image/jpeg,image/png,image/webp'
+const BATCH_ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+
+// ---------------------------------------------------------------------------
+// Batch pairing (ADR-013)
+// ---------------------------------------------------------------------------
+
+/** @typedef {{ stem: string, front: File | null, back: File | null, status: 'ready' | 'front-only' | 'orphan' }} PairingRow */
+
+/**
+ * @param {File} file
+ * @returns {{ stem: string, role: 'front' | 'back' | 'front-only', file: File }}
+ */
+function parseLabelFile(file) {
+  const name = file.name
+  const dot = name.lastIndexOf('.')
+  const base = dot >= 0 ? name.slice(0, dot) : name
+  const lower = base.toLowerCase()
+
+  if (lower.endsWith('-front')) {
+    return { stem: base.slice(0, -6), role: 'front', file }
+  }
+  if (lower.endsWith('-back')) {
+    return { stem: base.slice(0, -5), role: 'back', file }
+  }
+  return { stem: base, role: 'front-only', file }
+}
+
+/**
+ * @param {File[]} files
+ * @returns {{ rows: PairingRow[], error: string | null }}
+ */
+function computePairs(files) {
+  for (const f of files) {
+    if (!BATCH_ALLOWED_TYPES.has(f.type)) {
+      return {
+        rows: [],
+        error: `Unsupported file type: ${f.name}. Only JPEG, PNG, and WebP are accepted.`,
+      }
+    }
+  }
+
+  if (files.length > 20) {
+    return { rows: [], error: 'Maximum 20 files' }
+  }
+
+  /** @type {Map<string, { front: File | null, back: File | null, frontOnly: File | null }>} */
+  const groups = new Map()
+
+  for (const file of files) {
+    const { stem, role } = parseLabelFile(file)
+    if (!groups.has(stem)) {
+      groups.set(stem, { front: null, back: null, frontOnly: null })
+    }
+    const g = groups.get(stem)
+    if (role === 'front' && !g.front) g.front = file
+    else if (role === 'back' && !g.back) g.back = file
+    else if (role === 'front-only' && !g.frontOnly) g.frontOnly = file
+  }
+
+  /** @type {PairingRow[]} */
+  const rows = []
+  for (const [stem, g] of groups) {
+    const front = g.front ?? g.frontOnly
+    if (g.back && !front) {
+      rows.push({ stem, front: null, back: g.back, status: 'orphan' })
+    } else if (front) {
+      rows.push({
+        stem,
+        front,
+        back: g.back,
+        status: g.back ? 'ready' : 'front-only',
+      })
+    }
+  }
+
+  rows.sort((a, b) => a.stem.localeCompare(b.stem))
+
+  const submittable = rows.filter(r => r.status !== 'orphan').length
+  if (submittable > 10) {
+    return {
+      rows: [],
+      error: `Maximum 10 products. Found ${submittable}. Drop a smaller set.`,
+    }
+  }
+
+  return { rows, error: null }
+}
+
 // ---------------------------------------------------------------------------
 // UploadZone — drag/drop + click-to-pick, thumbnail on selection
 // ---------------------------------------------------------------------------
@@ -211,12 +300,168 @@ function ResultPanel({ result }) {
 }
 
 // ---------------------------------------------------------------------------
-// BatchTab — Stage 2 placeholder
+// BatchTab — multi-file drop + pairing preview (Stage 3)
 // ---------------------------------------------------------------------------
 
-function BatchTab() {
+function BatchDropZone({ onFiles }) {
+  const [dragging, setDragging] = useState(false)
+  const inputRef = useRef(null)
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault()
+    setDragging(false)
+    const list = e.dataTransfer.files
+    if (list?.length) onFiles(Array.from(list))
+  }, [onFiles])
+
+  const zone = dragging
+    ? 'border-solid border-blue-400 bg-blue-50 cursor-copy'
+    : 'border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer'
+
   return (
-    <div className="text-center text-gray-400 py-16">Batch processing coming soon</div>
+    <div
+      onClick={() => inputRef.current?.click()}
+      onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={onDrop}
+      className={`relative flex flex-col items-center justify-center rounded-xl border-2 p-8 transition-all min-h-60 w-full ${zone}`}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept={BATCH_ACCEPT}
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const list = e.target.files
+          if (list?.length) onFiles(Array.from(list))
+          e.target.value = ''
+        }}
+      />
+      <div className="text-center select-none">
+        <div className="text-3xl text-gray-300 mb-2">↑</div>
+        <p className="text-sm font-medium text-gray-600">Drop up to 20 images (JPEG · PNG · WebP)</p>
+        <p className="text-xs text-gray-400 mt-1">Drag & drop or click to browse</p>
+      </div>
+    </div>
+  )
+}
+
+const PAIRING_STATUS = {
+  ready:      { label: 'Ready',      className: 'text-green-700'  },
+  'front-only': { label: 'Front only', className: 'text-amber-700' },
+  orphan:     { label: 'Orphan',     className: 'text-red-700'    },
+}
+
+function BatchTab() {
+  const [files, setFiles] = useState([])
+  const [rows, setRows] = useState([])
+  const [dropError, setDropError] = useState(null)
+
+  const showPreview = rows.length > 0 && !dropError
+
+  const reset = () => {
+    setFiles([])
+    setRows([])
+    setDropError(null)
+  }
+
+  const handleFiles = (incoming) => {
+    const { rows: paired, error } = computePairs(incoming)
+    if (error) {
+      setFiles([])
+      setRows([])
+      setDropError(error)
+      return
+    }
+    setFiles(incoming)
+    setRows(paired)
+    setDropError(null)
+  }
+
+  const readyCount = rows.filter(r => r.status !== 'orphan').length
+
+  return (
+    <>
+      {!showPreview && (
+        <BatchDropZone onFiles={handleFiles} />
+      )}
+
+      {dropError && (
+        <div className="mt-4 space-y-3">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {dropError}
+          </div>
+          <button
+            type="button"
+            onClick={reset}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {showPreview && (
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
+                  <th className="px-4 py-3 font-medium">Product</th>
+                  <th className="px-4 py-3 font-medium">Front</th>
+                  <th className="px-4 py-3 font-medium">Back</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const sty = PAIRING_STATUS[row.status]
+                  return (
+                    <tr
+                      key={row.stem}
+                      className={row.status === 'orphan' ? 'bg-gray-50 text-gray-400' : 'border-b border-gray-50 last:border-0'}
+                    >
+                      <td className="px-4 py-2.5 font-mono text-gray-700">{row.stem}</td>
+                      <td className="px-4 py-2.5 text-gray-600 truncate max-w-[10rem]">{row.front?.name ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-gray-600 truncate max-w-[10rem]">{row.back?.name ?? '—'}</td>
+                      <td className={`px-4 py-2.5 font-medium whitespace-nowrap ${sty.className}`}>
+                        {row.status === 'ready' && '✅ '}
+                        {row.status === 'front-only' && '⚠ '}
+                        {row.status === 'orphan' && '❌ '}
+                        {sty.label}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="px-4 py-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
+            <p className="text-sm text-gray-600">
+              {readyCount} product{readyCount === 1 ? '' : 's'} ready to check
+            </p>
+            <div className="ml-auto flex gap-2">
+              <button
+                type="button"
+                disabled
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white opacity-40 cursor-not-allowed"
+              >
+                Run batch
+              </button>
+              <button
+                type="button"
+                onClick={reset}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
