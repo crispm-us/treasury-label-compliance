@@ -41,7 +41,7 @@ Read in this order:
 
 ## What is deliberately out of scope
 
-Mode A application-matching (ADR-003) is partially implemented — API (`application=` on `POST /v1/check`, R-APP-01–R-APP-05), UI COLA stub toggle, and `GET /v1/applications` catalog; full COLA on-file integration is deferred. Batch endpoint (ADR-007), HEIC conversion, and persistent database are deferred or not started. See `IMPLEMENTATION_STATUS.md` §Deferred and §Not started.
+Mode A application-matching (ADR-003) is partially implemented — API (`application=` on `POST /v1/check`, R-APP-01–R-APP-05), UI COLA stub toggle, and `GET /v1/applications` catalog; full COLA on-file integration is deferred. Server-side batch endpoint (ADR-007) is not built; a client-side batch UI tab (ADR-013) is accepted but not yet implemented. HEIC conversion and persistent database are deferred or not started. See `IMPLEMENTATION_STATUS.md` §Deferred and §Not started.
 
 ---
 

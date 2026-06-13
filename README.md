@@ -84,7 +84,7 @@ bash scripts/smoke-test.sh
 
 ## Scope
 
-This prototype implements the two-layer extraction + compliance architecture with 105 tests, `GET /v1/applications` COLA stub catalog, real-label smoke tests, a three-provider fallback chain, and a React + Vite web UI. Mode A application-matching is implemented end-to-end (API + UI COLA stub toggle; COLA on-file integration deferred). Batch upload and HEIC conversion remain deferred — see [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
+This prototype implements the two-layer extraction + compliance architecture with 105 tests, `GET /v1/applications` COLA stub catalog, real-label smoke tests, a three-provider fallback chain, and a React + Vite web UI. Mode A application-matching is implemented end-to-end (API + UI COLA stub toggle; COLA on-file integration deferred). Server-side batch upload ([ADR-007](docs/adr/007-batch-processing-design.md)) is not built; a client-side batch UI tab ([ADR-013](docs/adr/013-batch-processing-poc.md)) is accepted but not yet implemented. HEIC conversion remains deferred. See [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for the full accounting.
 
 ---
 
