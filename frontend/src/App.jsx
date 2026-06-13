@@ -211,33 +211,31 @@ function ResultPanel({ result }) {
 }
 
 // ---------------------------------------------------------------------------
-// App
+// BatchTab — Stage 2 placeholder
 // ---------------------------------------------------------------------------
 
-export default function App() {
+function BatchTab() {
+  return (
+    <div className="text-center text-gray-400 py-16">Batch processing coming soon</div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// SingleTab — one label check (existing flow)
+// ---------------------------------------------------------------------------
+
+function SingleTab({ apiKey, authRequired, submitRef }) {
   const [front,     setFront]     = useState(null)
   const [back,      setBack]      = useState(null)
-  const [apiKey,       setApiKey]       = useState('')
-  const [authRequired, setAuthRequired] = useState(false)
   const [result,    setResult]    = useState(null)
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState(null)
-  const [uploadKey, setUploadKey] = useState(0)   // increment to reset UploadZones
-  const [version,   setVersion]   = useState(null)
+  const [uploadKey, setUploadKey] = useState(0)
   const [colaEnabled, setColaEnabled] = useState(false)
   const [colaId,      setColaId]      = useState('')
   const [catalog,     setCatalog]     = useState([])
 
-  // Fetch version info, auth status, and COLA catalog once on mount
   useEffect(() => {
-    fetch('/healthz')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.auth_required) setAuthRequired(true) })
-      .catch(() => {})
-    fetch('/version')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setVersion(data) })
-      .catch(() => {})
     fetch('/v1/applications')
       .then(r => r.ok ? r.json() : [])
       .then(data => { if (data.length) setCatalog(data) })
@@ -276,94 +274,167 @@ export default function App() {
     }
   }
 
-  // Clear panels and result; API key is intentionally preserved
+  useEffect(() => {
+    if (submitRef) submitRef.current = handleSubmit
+  })
+
   const handleClear = () => {
     setFront(null)
     setBack(null)
     setResult(null)
     setError(null)
-    setUploadKey(k => k + 1)  // force re-mount of UploadZones
+    setUploadKey(k => k + 1)
   }
+
+  return (
+    <>
+      {/* Upload panels */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Front panel <span className="text-red-400">*</span>
+          </label>
+          <UploadZone key={`front-${uploadKey}`} slot="front" label="Front panel" required onFile={setFront} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Back panel{' '}
+            <span className="text-gray-400 font-normal text-xs">(optional — improves coverage)</span>
+          </label>
+          <UploadZone key={`back-${uploadKey}`} slot="back" label="Back panel" onFile={setBack} />
+        </div>
+      </div>
+
+      {/* COLA compare toggle */}
+      <div className="mt-4 rounded-xl border border-gray-200 bg-white overflow-hidden">
+        <button
+          type="button"
+          onClick={() => { setColaEnabled(v => !v); setColaId('') }}
+          className="w-full flex items-center gap-2 px-4 py-3 text-left"
+        >
+          <span className="text-sm font-medium text-gray-700">
+            Compare against COLA application stub
+          </span>
+          <span className="text-xs text-gray-400 font-normal">Mode A demo</span>
+          <span className={`ml-auto inline-flex h-5 w-8 items-center rounded-full transition-colors ${colaEnabled ? 'bg-blue-500' : 'bg-gray-200'}`}>
+            <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${colaEnabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+          </span>
+        </button>
+
+        {colaEnabled && (
+          <div className="px-4 pb-4 border-t border-gray-100">
+            <label className="block text-xs font-medium text-gray-500 mt-3 mb-1.5">
+              COLA stub to compare against
+            </label>
+            <select
+              value={colaId}
+              onChange={e => setColaId(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
+            >
+              <option value="">— select a COLA stub —</option>
+              {catalog.map(e => (
+                <option key={e.id} value={e.id}>{e.label}</option>
+              ))}
+            </select>
+            <p className="mt-2 text-xs text-gray-400">
+              The vision model extracts fields from the uploaded image as normal; extracted values are then compared against the selected stub. Mismatches appear as R-APP-* issues. A front panel image (<span className="text-red-400">*</span>) is still required.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Submit */}
+      <div className={`mt-4 flex gap-3 items-end ${authRequired ? 'justify-end' : ''}`}>
+        <button
+          onClick={handleSubmit}
+          disabled={!front || loading || (colaEnabled && !colaId)}
+          className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+        >
+          {loading ? 'Checking…' : 'Check label'}
+        </button>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {loading && (
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white shadow-sm p-6 animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/3 mb-3" />
+          <div className="h-3 bg-gray-100 rounded w-2/3 mb-2" />
+          <div className="h-3 bg-gray-100 rounded w-1/2" />
+        </div>
+      )}
+
+      {/* Result */}
+      {!loading && result && (
+        <>
+          <ResultPanel result={result} />
+          <div className="mt-3 flex justify-end">
+            <button
+              onClick={handleClear}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+            >
+              New check
+            </button>
+          </div>
+        </>
+      )}
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// App
+// ---------------------------------------------------------------------------
+
+export default function App() {
+  const [apiKey,       setApiKey]       = useState('')
+  const [authRequired, setAuthRequired] = useState(false)
+  const [version,      setVersion]      = useState(null)
+  const [activeTab,    setActiveTab]    = useState('single')
+  const singleSubmitRef = useRef(null)
+
+  useEffect(() => {
+    fetch('/healthz')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.auth_required) setAuthRequired(true) })
+      .catch(() => {})
+    fetch('/version')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setVersion(data) })
+      .catch(() => {})
+  }, [])
+
+  const tabClass = (tab) =>
+    activeTab === tab
+      ? 'rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white'
+      : 'rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors'
 
   return (
     <div className="min-h-screen bg-gray-50">
 
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto flex items-baseline gap-3">
-          <h1 className="text-lg font-semibold text-gray-900">TTB Label Compliance Checker</h1>
-          <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 border border-amber-200">
-            prototype
-          </span>
-          {version && (
-            <span className="ml-auto text-xs text-gray-400 font-mono">
-              {version.commit}{version.environment && version.environment !== 'dev' ? ` · ${version.environment}` : ''}
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-lg font-semibold text-gray-900">TTB Label Compliance Checker</h1>
+            <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 border border-amber-200">
+              prototype
             </span>
-          )}
-        </div>
-      </header>
-
-      <main className="max-w-2xl mx-auto px-6 py-8">
-
-        {/* Upload panels */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Front panel <span className="text-red-400">*</span>
-            </label>
-            <UploadZone key={`front-${uploadKey}`} slot="front" label="Front panel" required onFile={setFront} />
+            {version && (
+              <span className="ml-auto text-xs text-gray-400 font-mono">
+                {version.commit}{version.environment && version.environment !== 'dev' ? ` · ${version.environment}` : ''}
+              </span>
+            )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Back panel{' '}
-              <span className="text-gray-400 font-normal text-xs">(optional — improves coverage)</span>
-            </label>
-            <UploadZone key={`back-${uploadKey}`} slot="back" label="Back panel" onFile={setBack} />
-          </div>
-        </div>
 
-        {/* COLA compare toggle */}
-        <div className="mt-4 rounded-xl border border-gray-200 bg-white overflow-hidden">
-          <button
-            type="button"
-            onClick={() => { setColaEnabled(v => !v); setColaId('') }}
-            className="w-full flex items-center gap-2 px-4 py-3 text-left"
-          >
-            <span className="text-sm font-medium text-gray-700">
-              Compare against COLA application stub
-            </span>
-            <span className="text-xs text-gray-400 font-normal">Mode A demo</span>
-            <span className={`ml-auto inline-flex h-5 w-8 items-center rounded-full transition-colors ${colaEnabled ? 'bg-blue-500' : 'bg-gray-200'}`}>
-              <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${colaEnabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
-            </span>
-          </button>
-
-          {colaEnabled && (
-            <div className="px-4 pb-4 border-t border-gray-100">
-              <label className="block text-xs font-medium text-gray-500 mt-3 mb-1.5">
-                COLA stub to compare against
-              </label>
-              <select
-                value={colaId}
-                onChange={e => setColaId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
-              >
-                <option value="">— select a COLA stub —</option>
-                {catalog.map(e => (
-                  <option key={e.id} value={e.id}>{e.label}</option>
-                ))}
-              </select>
-              <p className="mt-2 text-xs text-gray-400">
-                The vision model extracts fields from the uploaded image as normal; extracted values are then compared against the selected stub. Mismatches appear as R-APP-* issues. A front panel image (<span className="text-red-400">*</span>) is still required.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* API key + submit */}
-        <div className="mt-4 flex gap-3 items-end">
           {authRequired && (
-            <div className="flex-1">
+            <div className="mt-3">
               <label className="block text-xs font-medium text-gray-500 mb-1">
                 API key
               </label>
@@ -371,58 +442,36 @@ export default function App() {
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && activeTab === 'single') singleSubmitRef.current?.()
+                }}
                 placeholder="X-API-Key value"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
             </div>
           )}
-          <button
-            onClick={handleSubmit}
-            disabled={!front || loading || (colaEnabled && !colaId)}
-            className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-          >
-            {loading ? 'Checking…' : 'Check label'}
-          </button>
+
+          <div className="mt-3 flex gap-2">
+            <button type="button" onClick={() => setActiveTab('single')} className={tabClass('single')}>
+              Single check
+            </button>
+            <button type="button" onClick={() => setActiveTab('batch')} className={tabClass('batch')}>
+              Batch
+            </button>
+          </div>
         </div>
+      </header>
 
-        {/* Error */}
-        {error && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+      <main className="max-w-2xl mx-auto px-6 py-8">
+        {activeTab === 'single'
+          ? <SingleTab apiKey={apiKey} authRequired={authRequired} submitRef={singleSubmitRef} />
+          : <BatchTab />
+        }
 
-        {/* Loading skeleton */}
-        {loading && (
-          <div className="mt-6 rounded-xl border border-gray-200 bg-white shadow-sm p-6 animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-1/3 mb-3" />
-            <div className="h-3 bg-gray-100 rounded w-2/3 mb-2" />
-            <div className="h-3 bg-gray-100 rounded w-1/2" />
-          </div>
-        )}
-
-        {/* Result */}
-        {!loading && result && (
-          <>
-            <ResultPanel result={result} />
-            <div className="mt-3 flex justify-end">
-              <button
-                onClick={handleClear}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-              >
-                New check
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Footer */}
         <p className="mt-10 text-xs text-gray-400 text-center">
           Prototype — not certified by TTB. Not a substitute for legal or regulatory counsel.
           Checks 27 CFR Parts 4, 5, 7, and 16 only.
         </p>
-
       </main>
     </div>
   )
