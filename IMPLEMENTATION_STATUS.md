@@ -167,10 +167,10 @@ A React + Vite + Tailwind v4 UI is built (`frontend/`) and served from the FastA
 
 Not built: the base64 JSON endpoint specified in ADR-005 — the UI uses multipart `POST /v1/check` directly. The mobile-optimized layout is also deferred (desktop-first).
 
-### Batch processing (ADR-007)
-**ADR reference:** ADR-007
+### Batch processing (ADR-007 / ADR-013)
+**ADR reference:** ADR-007 (production design, not built), ADR-013 (UI PoC, partial)
 
-ADR-007 documents a batch endpoint for processing multiple labels in a single request (e.g. for pre-market screening of a product line). Not implemented.
+ADR-007 documents a server-side batch endpoint (`POST /v1/labels/check` with a `labels` array, async fan-out). Not implemented. ADR-013 supersedes it for the prototype scope: a batch UI tab that submits up to 10 products sequentially via the existing `POST /v1/check` endpoint, with auto-pairing by filename convention, live results table, and CSV export. No backend changes required.
 
 ### Schema version gate (ADR-011)
 **ADR reference:** ADR-011 §Schema evolution
