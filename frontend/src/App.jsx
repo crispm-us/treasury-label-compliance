@@ -28,7 +28,7 @@ const BATCH_ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 // Batch pairing (ADR-013)
 // ---------------------------------------------------------------------------
 
-/** @typedef {{ stem: string, front: File | null, back: File | null, status: 'ready' | 'front-only' | 'orphan' }} PairingRow */
+/** @typedef {{ stem: string, front: File | null, back: File | null, status: 'ready' | 'front-only' | 'orphan', rowStatus?: 'pending' | 'running' | 'done' | 'error', checkResult?: object | null, rowError?: string | null }} PairingRow */
 
 /**
  * @param {File} file
@@ -353,17 +353,88 @@ const PAIRING_STATUS = {
   orphan:     { label: 'Orphan',     className: 'text-red-700'    },
 }
 
-function BatchTab() {
+/** @param {PairingRow[]} rows */
+function computeBatchSummary(rows) {
+  let compliant = 0
+  let noncompliant = 0
+  let review = 0
+  let errors = 0
+  for (const row of rows) {
+    if (row.status === 'orphan') continue
+    if (row.rowStatus === 'error') {
+      errors++
+      continue
+    }
+    if (row.rowStatus === 'done' && row.checkResult) {
+      const v = row.checkResult.verdict
+      if (v === 'COMPLIANT') compliant++
+      else if (v === 'NONCOMPLIANT') noncompliant++
+      else if (v === 'UNVERIFIABLE') review++
+      else if (v === 'ERROR') errors++
+    }
+  }
+  return { compliant, noncompliant, review, errors }
+}
+
+function BatchRowStatusCell({ row }) {
+  if (row.status === 'orphan') {
+    return (
+      <span className="inline-block rounded border px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-500 border-gray-300">
+        Skipped
+      </span>
+    )
+  }
+
+  if (row.rowStatus === 'running') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-gray-500">
+        <span className="h-3 w-3 rounded-full border-2 border-gray-300 border-t-blue-600 animate-spin" />
+        Checking…
+      </span>
+    )
+  }
+
+  if (row.rowStatus === 'error') {
+    return (
+      <div>
+        <span className={`inline-block rounded border px-1.5 py-0.5 text-xs font-bold ${VERDICT_STYLE.ERROR.badge}`}>
+          ERROR
+        </span>
+        {row.rowError && (
+          <p className="text-xs text-red-600 mt-1 max-w-[12rem]">{row.rowError}</p>
+        )}
+      </div>
+    )
+  }
+
+  if (row.rowStatus === 'done' && row.checkResult) {
+    const v = row.checkResult.verdict
+    const sty = VERDICT_STYLE[v] ?? VERDICT_STYLE.ERROR
+    return (
+      <span className={`inline-block rounded border px-1.5 py-0.5 text-xs font-bold ${sty.badge}`}>
+        {VERDICT_LABEL[v] ?? v}
+      </span>
+    )
+  }
+
+  return <span className="text-gray-400">—</span>
+}
+
+function BatchTab({ apiKey, authRequired }) {
   const [files, setFiles] = useState([])
   const [rows, setRows] = useState([])
   const [dropError, setDropError] = useState(null)
+  const [runState, setRunState] = useState('idle')
 
   const showPreview = rows.length > 0 && !dropError
+  const submitCount = rows.filter(r => r.status !== 'orphan').length
+  const completedCount = rows.filter(r => r.rowStatus === 'done' || r.rowStatus === 'error').length
 
   const reset = () => {
     setFiles([])
     setRows([])
     setDropError(null)
+    setRunState('idle')
   }
 
   const handleFiles = (incoming) => {
@@ -372,14 +443,61 @@ function BatchTab() {
       setFiles([])
       setRows([])
       setDropError(error)
+      setRunState('idle')
       return
     }
     setFiles(incoming)
     setRows(paired)
     setDropError(null)
+    setRunState('idle')
   }
 
-  const readyCount = rows.filter(r => r.status !== 'orphan').length
+  const runBatch = async () => {
+    const submitRows = rows.filter(r => r.status !== 'orphan')
+    setRunState('running')
+
+    for (const row of submitRows) {
+      setRows(prev => prev.map(r =>
+        r.stem === row.stem ? { ...r, rowStatus: 'running', rowError: null } : r
+      ))
+
+      try {
+        const formData = new FormData()
+        formData.append('front', row.front)
+        if (row.back) formData.append('back', row.back)
+
+        const headers = {}
+        if (apiKey.trim()) headers['X-API-Key'] = apiKey.trim()
+
+        const res = await fetch('/v1/check', { method: 'POST', headers, body: formData })
+        const data = await res.json()
+
+        if (!res.ok) {
+          setRows(prev => prev.map(r =>
+            r.stem === row.stem
+              ? { ...r, rowStatus: 'error', rowError: `${res.status}: ${data.detail ?? res.statusText}` }
+              : r
+          ))
+        } else {
+          setRows(prev => prev.map(r =>
+            r.stem === row.stem
+              ? { ...r, rowStatus: 'done', checkResult: data, rowError: null }
+              : r
+          ))
+        }
+      } catch (e) {
+        setRows(prev => prev.map(r =>
+          r.stem === row.stem
+            ? { ...r, rowStatus: 'error', rowError: `Network error: ${e.message}` }
+            : r
+        ))
+      }
+    }
+
+    setRunState('done')
+  }
+
+  const summary = runState === 'done' ? computeBatchSummary(rows) : null
 
   return (
     <>
@@ -404,60 +522,133 @@ function BatchTab() {
 
       {showPreview && (
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          {runState === 'running' && (
+            <p className="px-4 py-3 text-sm text-gray-600 border-b border-gray-100 bg-gray-50">
+              Checking {completedCount} of {submitCount}…
+            </p>
+          )}
+          {runState === 'done' && summary && (
+            <p className="px-4 py-3 text-sm text-gray-700 border-b border-gray-100 bg-gray-50">
+              Done — {summary.compliant} COMPLIANT · {summary.noncompliant} NONCOMPLIANT · {summary.review} REVIEW · {summary.errors} ERROR
+            </p>
+          )}
+
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
-                  <th className="px-4 py-3 font-medium">Product</th>
-                  <th className="px-4 py-3 font-medium">Front</th>
-                  <th className="px-4 py-3 font-medium">Back</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => {
-                  const sty = PAIRING_STATUS[row.status]
-                  return (
+            {runState === 'idle' ? (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
+                    <th className="px-4 py-3 font-medium">Product</th>
+                    <th className="px-4 py-3 font-medium">Front</th>
+                    <th className="px-4 py-3 font-medium">Back</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => {
+                    const sty = PAIRING_STATUS[row.status]
+                    return (
+                      <tr
+                        key={row.stem}
+                        className={row.status === 'orphan' ? 'bg-gray-50 text-gray-400' : 'border-b border-gray-50 last:border-0'}
+                      >
+                        <td className="px-4 py-2.5 font-mono text-gray-700">{row.stem}</td>
+                        <td className="px-4 py-2.5 text-gray-600 truncate max-w-[10rem]">{row.front?.name ?? '—'}</td>
+                        <td className="px-4 py-2.5 text-gray-600 truncate max-w-[10rem]">{row.back?.name ?? '—'}</td>
+                        <td className={`px-4 py-2.5 font-medium whitespace-nowrap ${sty.className}`}>
+                          {row.status === 'ready' && '✅ '}
+                          {row.status === 'front-only' && '⚠ '}
+                          {row.status === 'orphan' && '❌ '}
+                          {sty.label}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
+                    <th className="px-4 py-3 font-medium">Product</th>
+                    <th className="px-4 py-3 font-medium">Front</th>
+                    <th className="px-4 py-3 font-medium">Back</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Issues</th>
+                    <th className="px-4 py-3 font-medium">Duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
                     <tr
                       key={row.stem}
                       className={row.status === 'orphan' ? 'bg-gray-50 text-gray-400' : 'border-b border-gray-50 last:border-0'}
                     >
                       <td className="px-4 py-2.5 font-mono text-gray-700">{row.stem}</td>
-                      <td className="px-4 py-2.5 text-gray-600 truncate max-w-[10rem]">{row.front?.name ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-gray-600 truncate max-w-[10rem]">{row.back?.name ?? '—'}</td>
-                      <td className={`px-4 py-2.5 font-medium whitespace-nowrap ${sty.className}`}>
-                        {row.status === 'ready' && '✅ '}
-                        {row.status === 'front-only' && '⚠ '}
-                        {row.status === 'orphan' && '❌ '}
-                        {sty.label}
+                      <td className="px-4 py-2.5 text-gray-600 truncate max-w-[8rem]">{row.front?.name ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-gray-600 truncate max-w-[8rem]">{row.back?.name ?? '—'}</td>
+                      <td className="px-4 py-2.5">
+                        <BatchRowStatusCell row={row} />
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-600">
+                        {row.checkResult?.issues?.length ?? '—'}
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
+                        {row.checkResult?.duration_ms != null
+                          ? `${(row.checkResult.duration_ms / 1000).toFixed(2)} s`
+                          : '—'}
                       </td>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           <div className="px-4 py-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
-            <p className="text-sm text-gray-600">
-              {readyCount} product{readyCount === 1 ? '' : 's'} ready to check
-            </p>
-            <div className="ml-auto flex gap-2">
-              <button
-                type="button"
-                disabled
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white opacity-40 cursor-not-allowed"
-              >
-                Run batch
-              </button>
-              <button
-                type="button"
-                onClick={reset}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
+            {runState === 'idle' && (
+              <>
+                <p className="text-sm text-gray-600">
+                  {submitCount} product{submitCount === 1 ? '' : 's'} ready to check
+                </p>
+                <div className="ml-auto flex gap-2">
+                  <button
+                    type="button"
+                    onClick={runBatch}
+                    disabled={submitCount === 0}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Run batch
+                  </button>
+                  <button
+                    type="button"
+                    onClick={reset}
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+            {runState === 'done' && (
+              <div className="ml-auto flex gap-2 w-full justify-end">
+                <button
+                  type="button"
+                  disabled
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-400 opacity-40 cursor-not-allowed"
+                  // Stage 5 — wire CSV download onClick
+                >
+                  Download CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                >
+                  New batch
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -710,7 +901,7 @@ export default function App() {
       <main className="max-w-2xl mx-auto px-6 py-8">
         {activeTab === 'single'
           ? <SingleTab apiKey={apiKey} authRequired={authRequired} submitRef={singleSubmitRef} />
-          : <BatchTab />
+          : <BatchTab apiKey={apiKey} authRequired={authRequired} />
         }
 
         <p className="mt-10 text-xs text-gray-400 text-center">
