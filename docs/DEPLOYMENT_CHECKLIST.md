@@ -220,7 +220,39 @@ For each product below, the "front-only" submission exercises the path where com
 
 ---
 
-## 7. Interview submission notes
+## 7. Batch PoC smoke test (post-submission, 2026-06-13)
+
+Batch processing UI ([ADR-013](adr/013-batch-processing-poc.md)) built and verified on Railway after submission. Client-side only: multi-file drop, filename-based pairing, sequential `POST /v1/check`, live results table, CSV export.
+
+### Local verification (localhost:8000)
+
+| Artifact | Description |
+|---|---|
+| [local-batch-pairing-preview.png](ui-screenshots/local-batch-pairing-preview.png) | 3 products: gamma-eta (Ready), jack-daniels-old-no-7 (Front only), titos-vodka (Ready) |
+| [local-batch-results.png](ui-screenshots/local-batch-results.png) | Done — 1 COMPLIANT · 1 NONCOMPLIANT · 1 REVIEW · 0 ERROR; all three verdict types in one run |
+
+### Railway verification (web-production-b6163.up.railway.app, commit 45e148b)
+
+| Artifact | Description |
+|---|---|
+| [railway-batch-pairing-preview.png](ui-screenshots/railway-batch-pairing-preview.png) | 4 products: gamma-eta (Ready), glenfiddich-12 (Ready), jack-daniels-old-no-7 (Front only), titos-vodka (Ready) |
+| [railway-batch-results.png](ui-screenshots/railway-batch-results.png) | Done — 2 COMPLIANT · 1 NONCOMPLIANT · 1 REVIEW · 0 ERROR |
+| [railway-batch-results.csv](ui-screenshots/railway-batch-results.csv) | CSV download — 4 rows; integer duration_ms; all 7 ADR-013 columns present |
+
+**CSV results (Railway run):**
+
+| product_id | verdict | issues | duration_ms |
+|---|---|---|---|
+| gamma-eta | COMPLIANT | — | 2304 |
+| glenfiddich-12 | COMPLIANT | — | 2970 |
+| jack-daniels-old-no-7 | NONCOMPLIANT | R-GW-01 | 2103 |
+| titos-vodka | REVIEW | R-DS-03 | 2151 |
+
+Verdicts match single-check results from §6. Pairing (Front only for JD front-only file), REVIEW display label, CSV export, and sequential submission all confirmed working on production.
+
+---
+
+## 8. Interview submission notes
 
 - `docs/adr/` — architectural decision-making with explicit trade-off reasoning.
 - [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md) and [docs/ui-screenshots/](ui-screenshots/) — real-label smoke test matrix and browser verification artifacts.

@@ -1,0 +1,5 @@
+product_id,front_file,back_file,verdict,issues,duration_ms,checked_at
+gamma-eta,gamma-eta-front.png,gamma-eta-back.png,COMPLIANT,,2304,2026-06-13T18:44:48.300Z
+glenfiddich-12,glenfiddich-12-front.jpg,glenfiddich-12-back.jpg,COMPLIANT,,2970,2026-06-13T18:44:52.869Z
+jack-daniels-old-no-7,jack-daniels-old-no-7-front.jpg,,NONCOMPLIANT,R-GW-01,2103,2026-06-13T18:44:55.024Z
+titos-vodka,titos-vodka-front.jpg,titos-vodka-back.jpg,REVIEW,R-DS-03,2151,2026-06-13T18:44:57.323Z
