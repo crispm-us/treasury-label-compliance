@@ -330,7 +330,7 @@ function ResultPanel({ result }) {
 }
 
 // ---------------------------------------------------------------------------
-// BatchTab — multi-file drop + pairing preview (Stage 3)
+// BatchTab — multi-file drop, pairing preview, sequential checks, CSV export
 // ---------------------------------------------------------------------------
 
 function BatchDropZone({ onFiles }) {

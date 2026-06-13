@@ -3,7 +3,7 @@
 Date: 2026-06-13
 Status: Accepted — **implemented**
 
-> **Prototype status:** Batch UI tab implemented (Stages 2–5). Client-side only: multi-file drop zone, filename-based auto-pairing, sequential `POST /v1/check` per product, live results table, CSV export. No new backend endpoint. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
+> **Prototype status:** Batch UI tab implemented (Stages 2–6). Client-side only: multi-file drop zone, filename-based auto-pairing, sequential `POST /v1/check` per product, live results table, CSV export. No new backend endpoint. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
 
 ## Context
 

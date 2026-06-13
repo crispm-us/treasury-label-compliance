@@ -3,7 +3,7 @@
 Date: 2026-06-09
 Status: Accepted — **not implemented in prototype**
 
-> **Prototype status:** Batch processing was not built. The API implements single-label submission only (`POST /v1/check`). [ADR-013](013-batch-processing-poc.md) supersedes this ADR for the prototype scope: a client-side batch UI tab (not yet built) that submits products sequentially via the existing endpoint, with no new backend surface. This ADR documents the accepted design for a future server-side implementation. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
+> **Prototype status:** Batch processing was not built. The API implements single-label submission only (`POST /v1/check`). [ADR-013](013-batch-processing-poc.md) supersedes this ADR for the prototype scope: a client-side batch UI tab (implemented) that submits products sequentially via the existing endpoint, with no new backend surface. This ADR documents the accepted design for a future server-side implementation. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
 
 ## Context
 
