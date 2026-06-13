@@ -133,7 +133,7 @@ function buildCsv(rows) {
         r.back?.name ?? '',
         verdict,
         issues,
-        r.checkResult?.duration_ms ?? '',
+        r.checkResult?.duration_ms != null ? Math.round(r.checkResult.duration_ms) : '',
         r.checkedAt ?? '',
       ].map(csvCell).join(',')
     })
@@ -354,7 +354,7 @@ function BatchDropZone({ onFiles }) {
       onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
-      className={`relative flex flex-col items-center justify-center rounded-xl border-2 p-8 transition-all min-h-60 w-full ${zone}`}
+      className={`relative flex flex-col items-center justify-center rounded-xl border-2 p-4 transition-all h-60 w-full ${zone}`}
     >
       <input
         ref={inputRef}
@@ -372,6 +372,7 @@ function BatchDropZone({ onFiles }) {
         <div className="text-3xl text-gray-300 mb-2">↑</div>
         <p className="text-sm font-medium text-gray-600">Drop up to 20 images (JPEG · PNG · WebP)</p>
         <p className="text-xs text-gray-400 mt-1">Drag & drop or click to browse</p>
+        <p className="text-xs text-gray-400">max 10 MB per file</p>
       </div>
     </div>
   )
@@ -631,8 +632,8 @@ function BatchTab({ apiKey, authRequired }) {
                     <th className="px-4 py-3 font-medium">Front</th>
                     <th className="px-4 py-3 font-medium">Back</th>
                     <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Issues</th>
-                    <th className="px-4 py-3 font-medium">Duration</th>
+                    <th className="px-4 py-3 font-medium w-12 text-right">Issues</th>
+                    <th className="px-4 py-3 font-medium w-20 whitespace-nowrap text-right">Duration</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -647,10 +648,10 @@ function BatchTab({ apiKey, authRequired }) {
                       <td className="px-4 py-2.5">
                         <BatchRowStatusCell row={row} />
                       </td>
-                      <td className="px-4 py-2.5 text-gray-600">
+                      <td className="px-4 py-2.5 text-gray-600 w-12 text-right">
                         {row.checkResult?.issues?.length ?? '—'}
                       </td>
-                      <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
+                      <td className="px-4 py-2.5 text-gray-600 w-20 whitespace-nowrap text-right">
                         {row.checkResult?.duration_ms != null
                           ? `${(row.checkResult.duration_ms / 1000).toFixed(2)} s`
                           : '—'}
@@ -673,14 +674,14 @@ function BatchTab({ apiKey, authRequired }) {
                     type="button"
                     onClick={runBatch}
                     disabled={submitCount === 0}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                   >
                     Run batch
                   </button>
                   <button
                     type="button"
                     onClick={reset}
-                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
                   >
                     Cancel
                   </button>
@@ -692,14 +693,14 @@ function BatchTab({ apiKey, authRequired }) {
                 <button
                   type="button"
                   onClick={downloadCsv}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
                 >
                   Download CSV
                 </button>
                 <button
                   type="button"
                   onClick={reset}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
                 >
                   New batch
                 </button>

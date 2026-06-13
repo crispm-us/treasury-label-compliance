@@ -138,7 +138,7 @@ Set `API_KEY`; send `X-API-Key` on `POST /v1/check`. Unset locally = no auth. `P
 `EXTRACTION_MODEL` (primary) and `EXTRACTION_FALLBACK_MODELS` (comma-separated, sequential on retryable errors). Benchmarks favor Gemini 2.5 Flash-Lite for speed; see [latency-benchmarks.md](latency-benchmarks.md).
 
 **Batch endpoint or verify-without-model mode?**
-Server-side batch ([ADR-007](adr/007-batch-processing-design.md)) is not built. A client-side batch UI tab ([ADR-013](adr/013-batch-processing-poc.md)) is accepted and planned (sequential `POST /v1/check` calls, filename-based auto-pairing, up to 10 products) but not yet implemented. Mode A application-matching ([ADR-003](adr/003-dual-mode-input.md)) is partially implemented: optional `application` JSON on `POST /v1/check` (R-APP-01–R-APP-05), UI COLA stub toggle, and `GET /v1/applications` catalog — extraction still runs via the vision model; full COLA on-file integration is deferred. Tests mock extraction.
+Server-side batch ([ADR-007](adr/007-batch-processing-design.md)) is not built. A client-side batch UI tab ([ADR-013](adr/013-batch-processing-poc.md)) is implemented: sequential `POST /v1/check` calls, filename-based auto-pairing (up to 10 products), live results table, and CSV export. Mode A application-matching ([ADR-003](adr/003-dual-mode-input.md)) is partially implemented: optional `application` JSON on `POST /v1/check` (R-APP-01–R-APP-05), UI COLA stub toggle, and `GET /v1/applications` catalog — extraction still runs via the vision model; full COLA on-file integration is deferred. Tests mock extraction.
 
 **What comes back besides the verdict?**
 `request_id`, `duration_ms` (server-side extraction time in milliseconds), token usage, filenames, SHA-256 hashes, label references. Server-side JSONL audit logs in `audit_logs/` (gitignored, sensitive). See [ADR-010](adr/010-audit-logging.md).
@@ -210,7 +210,7 @@ Strict separation of AI extraction (Layer 1) from deterministic compliance check
 [docs/adr/](adr/) — decisions with explicit trade-offs and alternatives rejected. Real-label testing findings, iteration notes, and smoke-test results are in [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md), [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md), and Part II of this FAQ.
 
 **How do I quickly assess architectural completeness?**
-Read [docs/adr/README.md](adr/README.md) status table alongside [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md). Built: two-layer pipeline (009), extraction schema (011), FastAPI (004), Railway target (006), partial audit (010), partial preprocessing (008), partial UI — React+Vite+Tailwind (005), partial Mode A application-matching (003). Not built: server-side batch (ADR-007); client-side batch UI (ADR-013) accepted but not yet implemented. Mode A full COLA on-file integration remains deferred.
+Read [docs/adr/README.md](adr/README.md) status table alongside [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md). Built: two-layer pipeline (009), extraction schema (011), FastAPI (004), Railway target (006), partial audit (010), partial preprocessing (008), partial UI — React+Vite+Tailwind (005), partial Mode A application-matching (003), client-side batch UI (ADR-013). Not built: server-side batch (ADR-007). Mode A full COLA on-file integration remains deferred.
 
 **Why keep `requirements-analysis.md` if much is deferred?**
 Historical context for scope decisions and stakeholder constraints (no COLA integration, no persistent storage, verbatim GWS requirement). Not current behavior.

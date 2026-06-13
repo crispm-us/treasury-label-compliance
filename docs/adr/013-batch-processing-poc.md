@@ -1,9 +1,9 @@
 # ADR-013: Batch Processing — Client-Side PoC
 
 Date: 2026-06-13
-Status: Accepted — **not yet implemented**
+Status: Accepted — **implemented**
 
-> **Prototype status:** Batch UI tab not yet built. Stage 2–5 (tab restructure, pairing preview, sequential submission, CSV export) are planned for local iteration only; no git push until Stage 6. No new backend endpoint. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
+> **Prototype status:** Batch UI tab implemented (Stages 2–5). Client-side only: multi-file drop zone, filename-based auto-pairing, sequential `POST /v1/check` per product, live results table, CSV export. No new backend endpoint. See [`IMPLEMENTATION_STATUS.md`](../../IMPLEMENTATION_STATUS.md).
 
 ## Context
 

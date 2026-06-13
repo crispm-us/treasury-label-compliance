@@ -21,7 +21,7 @@ One ADR per significant design decision. Read them for rationale and context. Fo
 | [005](005-frontend-framework.md) | Frontend framework (React + Vite + Tailwind) | ⚠ Partial — React + Vite + Tailwind v4 UI built and served from FastAPI; drag-and-drop panel upload, compliance result display, duration/version/clear implemented; Mode A COLA stub toggle implemented; base64 JSON endpoint and mobile layout deferred |
 | [006](006-deployment-target.md) | Deployment target (Railway) | ✅ Built |
 | [007](007-batch-processing-design.md) | Batch processing design | ❌ Not built — superseded for prototype scope by ADR-013 |
-| [013](013-batch-processing-poc.md) | Batch processing — client-side UI PoC | ❌ Not built — pending Stage 2–5; accepted design: batch tab (React), sequential `POST /v1/check`, filename-based auto-pairing, CSV export |
+| [013](013-batch-processing-poc.md) | Batch processing — client-side UI PoC | ⚠ Partial — client-side batch tab built (drop zone, pairing preview, sequential single-check calls, CSV export); no server-side batch endpoint (ADR-007) |
 | [008](008-image-preprocessing.md) | Image preprocessing and format handling | ⚠ Partial — magic-byte format validation, 10 MB size limit, and EXIF orientation correction (Pillow `exif_transpose`) implemented; HEIC conversion and resolution normalization deferred |
 | [009](009-two-layer-architecture.md) | Two-layer architecture: AI extraction + deterministic compliance | ✅ Built |
 | [010](010-audit-logging.md) | Audit logging | ⚠ Partial — JSONL audit log implemented; sensitivity-tier enforcement (Level A/B/C) from original design not implemented — see ADR-010 body |
