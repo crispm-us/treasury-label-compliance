@@ -102,6 +102,9 @@ Screenshots linked in §6 below reflect the current extraction prompt (post-LBL-
 | Delirium Tremens (bottle) | front + back | beer | NONCOMPLIANT | R-GW-02 error + R-MB-04 warning; partial verification ✓ |
 | Baci di Sangiovese | front + back | wine | COMPLIANT ✓ | 0 violations — clean European wine label |
 | Budweiser | front + back (reversed) | beer | COMPLIANT ✓ | ⚠ Robustness test only — panels submitted in wrong order intentionally; not a compliance verification |
+| Evergrain keg (COLA) | front only | beer | UNVERIFIABLE (REVIEW) | Single-panel keg collar; GWS/bottler not on front alone — expected |
+| Pinotopia (COLA) | front + back | wine | COMPLIANT ✓ | COLA flat artwork, PNG |
+| Gamma-Eta Whisky (COLA) | front + back | spirits | COMPLIANT ✓ | COLA flat artwork, PNG |
 
 ### Mode A (application-matching) smoke tests (2026-06-12, post-prompt LBL-AUD-0612)
 
@@ -160,45 +163,13 @@ Synthetic labels are sufficient for demonstrating the architecture, but real lab
 - *Upside-down or rotated photos:* the vision model handles orientation — the Henninger GWS images are upside-down in the photo and still readable.
 - *Extreme angles, glare, heavy curvature:* produce low-confidence or not_found results → UNVERIFIABLE rather than a false verdict.
 
-### Available real label pairs
+### Test label inventory
 
-#### Spirits
-
-| Product | Front | Back | Notes |
-|---|---|---|---|
-| Tito's Handmade Vodka (domestic TX, 1L) | `spirits/titos-vodka-front.jpg` | `spirits/titos-vodka-back.jpg` | GWS present on back ✓; 80 Proof / 40% ABV; Distilled from corn |
-| Jack Daniel's Old No. 7 — **EU market 70cl** *(front only)* | `spirits/jack-daniels-old-no-7-eu-front.jpg` | — | ⚠ Non-US label: "70cl 40% Vol." format, no GWS; standalone front-only test — verifies checker handles European labels gracefully |
-| Jack Daniel's Old No. 7 (domestic TN) | `spirits/jack-daniels-old-no-7-front.jpg` | `spirits/jack-daniels-old-no-7-back.jpg` | 200 ml miniature (front) / 750 ml (back) — different sizes photographed; no GWS visible on either panel — ⚠ deferred; GWS panel not photographed; excluded from active test matrix |
-| Glenfiddich 12 Year Old (imported Scotch, 750ml) | `spirits/glenfiddich-12-front.jpg` | `spirits/glenfiddich-12-back.jpg` | GWS present on back ✓ — rotated 90°; imported by William Grant & Sons, Inc. |
-| The Glenlivet 12 Years of Age (imported Scotch, 750ml) | `spirits/glenlivet-12-front.jpg` | `spirits/glenlivet-12-back.jpg` | GWS present on back ✓ — rotated 90°; front shows 40% ABV + 80 Proof; imported by The Glenlivet Distilling Company, NY |
-
-#### Beer
-
-| Product | Front | Back/GWS | Notes |
-|---|---|---|---|
-| Henninger Lager (imported DE) | `beer/henninger-front.jpg` | `beer/henninger-gws.jpg` | GWS face upside-down in photo; importer info on a third face (`henninger-back.jpg`) |
-| Stiegl Radler Grapefruit (malt bev., imported AT) | `beer/stiegl-radler-grapefruit-front.jpg` | `beer/stiegl-radler-grapefruit-back.jpg` | 2.5% ABV; full importer address on back |
-| Budweiser (domestic) | `beer/budweiser-front.jpg` | `beer/budweiser-back.jpg` | GWS on side/back panel |
-| Delirium Tremens bottle (imported BE, 8.5% ABV) | `beer/delirium-tremens-bottle-front.jpg` | `beer/delirium-tremens-bottle-back.jpg` | BBL Inc, Frederick MD; imported |
-| Delirium Tremens can (imported BE, 8.5% ABV) | `beer/delirium-tremens-can-front.jpg` | `beer/delirium-tremens-can-gws.jpg` | 3-panel cylinder; also `delirium-tremens-can-side.jpg` (ABV + net contents) |
-| Heineken Original (imported NL) | `beer/heineken-original-front.jpg` | `beer/heineken-original-back.jpg` | Standard two-panel |
-| Sierra Nevada Pale Ale (domestic) | `beer/sierra-nevada-pale-ale-front.jpg` | `beer/sierra-nevada-pale-ale-back.jpg` | Standard two-panel |
-| Mike's Harder Lemonade — Deadpool 2 Ltd. Ed. (domestic) | `beer/mikes-harder-lemonade-front.jpg` | `beer/mikes-harder-lemonade-back.jpg` | Flavored malt beverage; 8% ABV; GWS vertical on back |
+Full inventory — file paths, panel conventions, COLA artwork, and bottle/can photographs — is in [`test-labels/README.md`](../test-labels/README.md) (*Official COLA artwork* and *Real label pairs*).
 
 **HEIC rejection test:** `beer/stiegl-radler-grapefruit-front.heic` — submit to verify 415 is returned for iPhone HEIC uploads.
 
 The smoke test (`scripts/smoke-test.sh`) includes real-label calls for Henninger, Stiegl, Heineken, Ron Ron, and Delirium Tremens can.
-
-#### Wine
-
-| Product | Front | Back | Notes |
-|---|---|---|---|
-| Auchere Sancerre 2024 (imported FR) | `wine/auchere-sancerre-front.jpg` | `wine/auchere-sancerre-back.jpg` | Importer: Planet Wine Inc |
-| Baci di Sangiovese 2020, Toscana IGT (imported IT) | `wine/baci-di-sangiovese-front.jpg` | `wine/baci-di-sangiovese-back.jpg` | Importer: Planet Wine Inc |
-| Brumes de La Tour Blanche 2021 Sauternes (imported FR) | `wine/brumes-tour-blanche-front.jpg` | `wine/brumes-tour-blanche-back-a.jpg` | Standard two-panel; canonical test uses front + back-a |
-| Loic Bulliat Bibine 2023, Beaujolais-Villages (imported FR) | `wine/bulliat-bibine-front.jpg` | `wine/bulliat-bibine-back.jpg` | Standard two-panel |
-| The "Ron Ron" Sauvignon 2023, Loire Valley (imported FR) | `wine/ron-ron-sauvignon-front.jpg` | `wine/ron-ron-sauvignon-back.jpg` | ⚠ GWS header in mixed case — R-GW-03 candidate |
-| Angry Orchard Iceman Hard Cider (domestic, 10% ABV) | `wine/angry-orchard-iceman-front.jpg` | `wine/angry-orchard-iceman-back.jpg` | Wine category (apple juice concentrate); CONTAINS SULFITES on label; GWS present on back ✓ |
 
 ### Multi-panel test matrix
 
@@ -215,6 +186,7 @@ For each product below, the "front-only" submission exercises the path where com
 | JD Old No. 7 EU 70cl | NONCOMPLIANT ✓ (R-GW-01) | — (front only) | Non-US label; no GWS |
 | Glenfiddich 12 | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | GWS on back rotated 90°; EXIF correction allows verbatim body match; ⚠ Inconsistent across runs — prior API run gave NONCOMPLIANT (R-GW-02); reversed-panel submission (back→front slot) → NONCOMPLIANT (R-GW-02) — panel slot affects extraction of rotated images |
 | Glenlivet 12 | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ | GWS rotated 90°; low-confidence reads → all warnings → UNVERIFIABLE; specific warnings vary by run (R-GW-02/03, R-DS-06) — schema_violations=7 observed; verdict UNVERIFIABLE is stable across runs |
+| Gamma-Eta Whisky (COLA artwork, domestic) | — | **COMPLIANT** ✓ | Type (i) COLA flat artwork, PNG; screenshot: docs/ui-screenshots/railway-gamma-eta-compliant.png |
 | **Real labels — beer** | | | |
 | Henninger Lager | NONCOMPLIANT ✓ (R-GW-01, R-MB-04, R-MB-05 ×2) | UNVERIFIABLE ✓ (R-MB-04, R-MB-05 ×2) | Submitted as front+GWS; GWS found ✓; net contents and bottler info on third (importer) face |
 | Stiegl Radler | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | ⚠ Previous prediction was UNVERIFIABLE — model finds 2.5% ABV on label; actual COMPLIANT |
@@ -224,6 +196,8 @@ For each product below, the "front-only" submission exercises the path where com
 | Delirium Tremens can — 3-panel hybrid (Option B) | — | NONCOMPLIANT ✓ (R-GW-02) | `front=beer/delirium-tremens-can-front.jpg`, `back=beer/delirium-tremens-can-gws-side.jpg` (GWS + side stitched); R-GW-02 error on `gws_body`; duration 2.80 s; schema_violations=0; model gemini/gemini-2.5-flash-lite; confirms genuine "OR TO OPERATE MACHINERY" violation (same root cause as bottle row above); screenshot: docs/ui-screenshots/railway-delirium-tremens-can-noncompliant.png |
 | Heineken Original | NONCOMPLIANT ✓ (R-GW-01, R-MB-04, R-MB-05 ×2) | **COMPLIANT** ✓ | |
 | Sierra Nevada Pale Ale | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | partial_verification; R-MB-04 + R-MB-03 warnings (net contents + ABV not visible); schema_violations=0 |
+| Mike's Harder Lemonade | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03, R-GW-02) | Flavored malt beverage; GWS header missing colon; body mismatch; also: model hallucinated abv_pct=5.0 (label says 8%) |
+| Evergrain keg (COLA artwork, domestic) | UNVERIFIABLE ✓ (REVIEW) | — | Single-panel keg collar; no back label exists; GWS or bottler fields not visible on front alone → REVIEW is expected and correct; screenshot: docs/ui-screenshots/railway-evergrain-unverifiable.png |
 | **Real labels — wine** | | | |
 | Auchere Sancerre | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02, R-WN-05 ×2) | GWS body mismatch; bottler name+address not visible in photos |
 | Baci di Sangiovese | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | ⚠ Unexpected — predicted NONCOMPLIANT; model reads GWS and all required fields correctly; schema_violations=0 |
@@ -231,7 +205,7 @@ For each product below, the "front-only" submission exercises the path where com
 | Bulliat Bibine | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03) | GWS header not all-caps — mixed case on this French import label |
 | Ron Ron Sauvignon | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03, R-GW-02) | GWS header mixed-case + body mismatch |
 | Angry Orchard Iceman | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | Wine category; R-GW-03 observed in prior run — model stochastic on header; schema_violations=11 |
-| Mike's Harder Lemonade | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-03, R-GW-02) | GWS header missing colon; body mismatch; also: model hallucinated abv_pct=5.0 (label says 8%) |
+| Pinotopia (COLA artwork, domestic) | — | **COMPLIANT** ✓ | Type (i) COLA flat artwork, PNG; screenshot: docs/ui-screenshots/railway-pinotopia-compliant.png |
 
 `unverified*` — not yet run through `smoke-test.sh`; add to script and re-run to confirm.
 
