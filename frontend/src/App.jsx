@@ -28,7 +28,7 @@ const BATCH_ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 // Batch pairing (ADR-013)
 // ---------------------------------------------------------------------------
 
-/** @typedef {{ stem: string, front: File | null, back: File | null, status: 'ready' | 'front-only' | 'orphan', rowStatus?: 'pending' | 'running' | 'done' | 'error', checkResult?: object | null, rowError?: string | null }} PairingRow */
+/** @typedef {{ stem: string, front: File | null, back: File | null, status: 'ready' | 'front-only' | 'orphan', rowStatus?: 'pending' | 'running' | 'done' | 'error', checkResult?: object | null, rowError?: string | null, checkedAt?: string }} PairingRow */
 
 /**
  * @param {File} file
@@ -108,6 +108,36 @@ function computePairs(files) {
   }
 
   return { rows, error: null }
+}
+
+function csvCell(v) {
+  const s = String(v ?? '')
+  return s.includes(',') || s.includes('"') || s.includes('\n')
+    ? `"${s.replace(/"/g, '""')}"`
+    : s
+}
+
+/** @param {PairingRow[]} rows */
+function buildCsv(rows) {
+  const header = 'product_id,front_file,back_file,verdict,issues,duration_ms,checked_at'
+  const dataRows = rows
+    .filter(r => r.status !== 'orphan')
+    .map(r => {
+      const verdict = r.rowStatus === 'error'
+        ? 'ERROR'
+        : (VERDICT_LABEL[r.checkResult?.verdict] ?? r.checkResult?.verdict ?? '')
+      const issues = r.checkResult?.issues?.map(i => i.rule_id).join('|') ?? ''
+      return [
+        r.stem,
+        r.front?.name ?? '',
+        r.back?.name ?? '',
+        verdict,
+        issues,
+        r.checkResult?.duration_ms ?? '',
+        r.checkedAt ?? '',
+      ].map(csvCell).join(',')
+    })
+  return [header, ...dataRows].join('\r\n')
 }
 
 // ---------------------------------------------------------------------------
@@ -475,26 +505,53 @@ function BatchTab({ apiKey, authRequired }) {
         if (!res.ok) {
           setRows(prev => prev.map(r =>
             r.stem === row.stem
-              ? { ...r, rowStatus: 'error', rowError: `${res.status}: ${data.detail ?? res.statusText}` }
+              ? {
+                  ...r,
+                  rowStatus: 'error',
+                  rowError: `${res.status}: ${data.detail ?? res.statusText}`,
+                  checkedAt: new Date().toISOString(),
+                }
               : r
           ))
         } else {
           setRows(prev => prev.map(r =>
             r.stem === row.stem
-              ? { ...r, rowStatus: 'done', checkResult: data, rowError: null }
+              ? {
+                  ...r,
+                  rowStatus: 'done',
+                  checkResult: data,
+                  rowError: null,
+                  checkedAt: new Date().toISOString(),
+                }
               : r
           ))
         }
       } catch (e) {
         setRows(prev => prev.map(r =>
           r.stem === row.stem
-            ? { ...r, rowStatus: 'error', rowError: `Network error: ${e.message}` }
+            ? {
+                ...r,
+                rowStatus: 'error',
+                rowError: `Network error: ${e.message}`,
+                checkedAt: new Date().toISOString(),
+              }
             : r
         ))
       }
     }
 
     setRunState('done')
+  }
+
+  const downloadCsv = () => {
+    const csv = buildCsv(rows)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `batch-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const summary = runState === 'done' ? computeBatchSummary(rows) : null
@@ -634,9 +691,8 @@ function BatchTab({ apiKey, authRequired }) {
               <div className="ml-auto flex gap-2 w-full justify-end">
                 <button
                   type="button"
-                  disabled
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-400 opacity-40 cursor-not-allowed"
-                  // Stage 5 — wire CSV download onClick
+                  onClick={downloadCsv}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
                 >
                   Download CSV
                 </button>
