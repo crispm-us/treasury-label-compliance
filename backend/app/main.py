@@ -438,7 +438,7 @@ async def check_label(
 
 @app.get("/healthz")
 async def healthz() -> dict:
-    return {"status": "ok", "audit_enabled": AUDIT_ENABLED}
+    return {"status": "ok", "audit_enabled": AUDIT_ENABLED, "auth_required": bool(API_KEY)}
 
 
 # ---------------------------------------------------------------------------

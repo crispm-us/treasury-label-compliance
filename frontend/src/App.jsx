@@ -217,7 +217,8 @@ function ResultPanel({ result }) {
 export default function App() {
   const [front,     setFront]     = useState(null)
   const [back,      setBack]      = useState(null)
-  const [apiKey,    setApiKey]    = useState('')
+  const [apiKey,       setApiKey]       = useState('')
+  const [authRequired, setAuthRequired] = useState(false)
   const [result,    setResult]    = useState(null)
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState(null)
@@ -227,8 +228,12 @@ export default function App() {
   const [colaId,      setColaId]      = useState('')
   const [catalog,     setCatalog]     = useState([])
 
-  // Fetch version info and COLA catalog once on mount
+  // Fetch version info, auth status, and COLA catalog once on mount
   useEffect(() => {
+    fetch('/healthz')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.auth_required) setAuthRequired(true) })
+      .catch(() => {})
     fetch('/version')
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setVersion(data) })
@@ -357,20 +362,21 @@ export default function App() {
 
         {/* API key + submit */}
         <div className="mt-4 flex gap-3 items-end">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 mb-1">
-              API key{' '}
-              <span className="font-normal text-gray-400">(leave blank if API_KEY is not set)</span>
-            </label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              placeholder="X-API-Key value"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            />
-          </div>
+          {authRequired && (
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                API key
+              </label>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                placeholder="X-API-Key value"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+          )}
           <button
             onClick={handleSubmit}
             disabled={!front || loading || (colaEnabled && !colaId)}
