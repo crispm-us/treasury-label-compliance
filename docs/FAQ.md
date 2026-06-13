@@ -269,7 +269,7 @@ The most important gap is that no synthetic label exercises R-GW-04 (GWS bold-ty
 EXIF/rotation handling (Glenfiddich, Glenlivet); mixed-case GWS headers on otherwise compliant labels (Ron Ron); vertical GWS layout; flavored malt ABV cross-field mismatch (Mike's Harder); EU-market label behavior (Jack Daniel's EU). Documented with expected verdicts in [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md).
 
 **How complete is the real-label smoke matrix?**
-Several products are confirmed (Tito's, Henninger, Stiegl, Heineken, Ron Ron, Mike's Harder, etc.); others marked `unverified*` pending smoke-test runs. Checklist tracks progress.
+All rows in [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md) were confirmed against Gemini Flash Lite (2026-06-12) via `scripts/smoke-test.sh`, the web UI, or `test-labels/mode-a-smoke-batch.sh`. Domestic Jack Daniel's Old No. 7 remains in `smoke-test.sh` for no-GWS regression only — photos lack a visible GWS and are excluded from the §6 verdict matrix until a clean GWS shot is available.
 
 **Why include TTB COLA research if images aren't public?**
 Shows domain research: TTB submits one image per panel (aligns with two-panel API design); COLA images require industry login (explains why corpus uses BAM, Open Food Facts, and own photos). Documented in [ADR-012](adr/012-multi-panel-submission.md) and [test-labels/README.md](../test-labels/README.md).

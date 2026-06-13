@@ -11,7 +11,7 @@ test-labels/
 └── beer/       — malt beverages (27 CFR Part 7)
 ```
 
-At least three products per category. Each product should have **two source files** (`{name}-front.jpg` and `{name}-back.jpg`) **or** a single pre-stitched file (`{name}-combined.jpg`). Exception: single-panel labels (keg collars, neck bands) may have only a `{name}-front.jpg` with no back. For products with only a combined file, no separate front/back are required.
+At least three products per category. Each product should have **two source files** (`{name}-front.jpg` and `{name}-back.jpg`) **or** a single pre-stitched file (`{name}-combined.jpg`, not stored in the repo — regenerate with `scripts/stitch-labels.py`). Exception: single-panel labels (keg collars, neck bands) may have only a `{name}-front.jpg` with no back. For products with only a combined file, no separate front/back are required.
 
 Run `scripts/stitch-labels.py` after adding any front+back pair to generate the combined image automatically.
 
@@ -179,7 +179,7 @@ For multi-panel submission guidance and expected verdicts, see [`docs/DEPLOYMENT
 |---|---|---|---|
 | Tito's Handmade Vodka (domestic TX, 1L) | `spirits/titos-vodka-front.jpg` | `spirits/titos-vodka-back.jpg` | GWS present on back label ✓; 80 Proof / 40% ABV; Distilled from corn |
 | Jack Daniel's Old No. 7 — **EU market, 70cl** *(front only — no back)* | `spirits/jack-daniels-old-no-7-eu-front.jpg` | — | ⚠ **Non-US label**: "70cl 40% Vol." format; no GWS (GWS is a US-only requirement); use to verify the checker returns NONCOMPLIANT on a European-market label without crashing |
-| Jack Daniel's Old No. 7 (domestic TN) | `spirits/jack-daniels-old-no-7-front.jpg` | `spirits/jack-daniels-old-no-7-back.jpg` | 200 ml miniature (front) / 750 ml (back) — different sizes photographed; no GWS visible on either panel |
+| Jack Daniel's Old No. 7 (domestic TN) | `spirits/jack-daniels-old-no-7-front.jpg` | `spirits/jack-daniels-old-no-7-back.jpg` | 200 ml miniature (front) / 750 ml (back) — different sizes photographed; no GWS visible on either panel; in `smoke-test.sh` for no-GWS regression only — excluded from DEPLOYMENT_CHECKLIST §6 GWS-resolution matrix pending a clean GWS photo |
 | Glenfiddich 12 Year Old Single Malt Scotch Whisky (imported, 750ml) | `spirits/glenfiddich-12-front.jpg` | `spirits/glenfiddich-12-back.jpg` | GWS present on back ✓ — rotated 90°, model handles orientation; imported by William Grant & Sons, Inc. |
 | The Glenlivet 12 Years of Age Single Malt Scotch Whisky (imported, 750ml) | `spirits/glenlivet-12-front.jpg` | `spirits/glenlivet-12-back.jpg` | GWS present on back ✓ — rotated 90°; front shows 40% ABV + 80 Proof — R-DS-03 proof/ABV consistency check; imported by The Glenlivet Distilling Company, NY |
 

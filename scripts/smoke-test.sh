@@ -206,6 +206,8 @@ check "Ron Ron Sauvignon real front+back → 200 (NONCOMPLIANT expected — R-GW
     -F "back=@test-labels/wine/ron-ron-sauvignon-back.jpg"
 
 # Spirits real labels.
+# Domestic Jack Daniel's: no-GWS regression only — photos lack visible GWS (200 ml front /
+# 750 ml back). Excluded from DEPLOYMENT_CHECKLIST §6 GWS-resolution matrix; see FAQ Part II.
 # Jack Daniel's: GWS not visible in either photo — expect NONCOMPLIANT on both submissions.
 check "Jack Daniel's Old No. 7 real front only → 200 (NONCOMPLIANT expected — no GWS on front)" \
     200 - \

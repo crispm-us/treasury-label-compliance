@@ -173,7 +173,7 @@ The smoke test (`scripts/smoke-test.sh`) includes real-label calls for Henninger
 
 ### Multi-panel test matrix
 
-For each product below, the "front-only" submission exercises the path where compliance-critical content (typically the GWS) is absent from the submitted panel; the "front+back" submission is the expected success path. Verdicts marked ✓ are confirmed from a smoke-test run against Gemini Flash Lite (2026-06-12). `unverified*` entries have not been tested against a live model.
+For each product below, the "front-only" submission exercises the path where compliance-critical content (typically the GWS) is absent from the submitted panel; the "front+back" submission is the expected success path. Verdicts marked ✓ are confirmed from a smoke-test run, web UI check, or Mode A batch run against Gemini Flash Lite (2026-06-12).
 
 | Product | Front-only | Front+back | Notes |
 |---|---|---|---|
@@ -184,6 +184,7 @@ For each product below, the "front-only" submission exercises the path where com
 | **Real labels — spirits** | | | |
 | Tito's Vodka | NONCOMPLIANT ✓ (R-GW-01, R-DS-04, R-DS-03) | **COMPLIANT** ✓ | GWS on back correctly found; schema_violations=4 (compliant verdict despite violations) |
 | JD Old No. 7 EU 70cl | NONCOMPLIANT ✓ (R-GW-01) | — (front only) | Non-US label; no GWS |
+| JD Old No. 7 domestic TN | NONCOMPLIANT ✓ (R-GW-01) | NONCOMPLIANT ✓ (R-GW-01) | Excluded from matrix until 2026-06-12; in `smoke-test.sh` only — 200 ml front / 750 ml back, no GWS visible on either panel; not a GWS-resolution test |
 | Glenfiddich 12 | NONCOMPLIANT (predicted) | **COMPLIANT** ✓ | GWS on back rotated 90°; EXIF correction allows verbatim body match; ⚠ Inconsistent across runs — prior API run gave NONCOMPLIANT (R-GW-02); reversed-panel submission (back→front slot) → NONCOMPLIANT (R-GW-02) — panel slot affects extraction of rotated images |
 | Glenlivet 12 | NONCOMPLIANT (predicted) | UNVERIFIABLE ✓ | GWS rotated 90°; low-confidence reads → all warnings → UNVERIFIABLE; specific warnings vary by run (R-GW-02/03, R-DS-06) — schema_violations=7 observed; verdict UNVERIFIABLE is stable across runs |
 | Gamma-Eta Whisky (COLA artwork, domestic) | — | **COMPLIANT** ✓ | Type (i) COLA flat artwork, PNG; screenshot: docs/ui-screenshots/railway-gamma-eta-compliant.png |
@@ -207,16 +208,14 @@ For each product below, the "front-only" submission exercises the path where com
 | Angry Orchard Iceman | NONCOMPLIANT (predicted) | NONCOMPLIANT ✓ (R-GW-02) | Wine category; R-GW-03 observed in prior run — model stochastic on header; schema_violations=11 |
 | Pinotopia (COLA artwork, domestic) | — | **COMPLIANT** ✓ | Type (i) COLA flat artwork, PNG; screenshot: docs/ui-screenshots/railway-pinotopia-compliant.png |
 
-`unverified*` — not yet run through `smoke-test.sh`; add to script and re-run to confirm.
-
 ### To-do before interviewer submission
 
 - [x] Run Henninger front + GWS smoke test — UNVERIFIABLE; GWS found ✓; net contents/bottler on third face
 - [x] Run Stiegl two-panel smoke test — COMPLIANT ✓ (model finds 2.5% ABV; earlier UNVERIFIABLE prediction was wrong)
 - [x] Run spirits real-label smoke tests — Tito's front+back COMPLIANT ✓; JD front+back NONCOMPLIANT (R-GW-01); Glenfiddich NONCOMPLIANT (R-GW-02); Glenlivet UNVERIFIABLE (low-confidence GWS read, rotated 90°)
-- [x] Run remaining `unverified*` rows — Budweiser, Delirium Tremens bottle, Auchere Sancerre, Bulliat Bibine confirmed (2026-06-12 via web UI)
-- [x] Run remaining `unverified*` rows: Sierra Nevada, Baci di Sangiovese, Brumes Tour Blanche confirmed (2026-06-12 via web UI) — all unverified* rows complete
-- [x] Jack Daniel's GWS photo — deferred; domestic JD removed from active test matrix pending a clean GWS shot
+- [x] Run remaining matrix rows — Budweiser, Delirium Tremens bottle, Auchere Sancerre, Bulliat Bibine confirmed (2026-06-12 via web UI)
+- [x] Run remaining matrix rows: Sierra Nevada, Baci di Sangiovese, Brumes Tour Blanche confirmed (2026-06-12 via web UI) — all §6 rows complete
+- [x] Jack Daniel's domestic TN — `smoke-test.sh` runs front-only and front+back (NONCOMPLIANT, R-GW-01); §6 matrix row added; full GWS-resolution test deferred pending a clean GWS photo
 - [x] Document smoke-test results and model anomalies (Mike's Harder abv_pct hallucination, Glenlivet UNVERIFIABLE) — captured in [DEPLOYMENT_CHECKLIST.md §6](DEPLOYMENT_CHECKLIST.md), [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md), and [FAQ.md Part II §5–6](FAQ.md).
 
 ---

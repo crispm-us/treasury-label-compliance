@@ -35,7 +35,7 @@ Read in this order:
 | 105 tests, 0 failures | Run `uv run --with pytest pytest` — no API key needed; extraction is fully mocked |
 | Three-provider fallback | `backend/app/services/extractor.py` + `backend/app/config.py` |
 | Parallel extraction | `backend/app/services/extractor.py` (`ThreadPoolExecutor`) |
-| Railway deployment | `DEPLOYMENT_CHECKLIST.md` + `docs/ui-screenshots/` |
+| Railway deployment | `docs/DEPLOYMENT_CHECKLIST.md` + `docs/ui-screenshots/` |
 
 ---
 
